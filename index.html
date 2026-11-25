@@ -73,11 +73,8 @@ li p+p{margin-top:5px}
 #map-references[hidden]{display:none}
 #map-references label{display:inline-flex;gap:5px;align-items:center;font-size:.875rem}
 #map-references input{width:16px;height:16px;accent-color:#124c60}
-.map-controls select{font-size:.875rem;max-width:100%;padding:4px 7px}
 #address-scale,#reference-status{color:#405763;font-size:.875rem}
 #reference-status:empty{display:none}
-.review-area-marker{display:grid;place-items:center;background:#ffdc46;border:2px solid #493302;border-radius:50%;color:#372500;font:bold 14px Arial,sans-serif;box-shadow:0 0 0 2px white,0 2px 5px #0009;cursor:pointer}
-.review-area-marker:hover,.review-area-marker:focus-visible{background:#fff1a1}
 .damage-cluster{filter:drop-shadow(0 0 1px #4c3009)}
 @media(max-width:780px){.verification-card .contacts{gap:5px}}
 @media(max-width:620px){main{padding:18px 10px 24px}.verification{grid-template-columns:1fr;gap:6px}.verification-card{border-top-width:1px;border-left:4px solid #78929e;padding:6px 10px}.verification-card[data-active=true][data-state=pass]{border-left-color:#23844f}.verification-card[data-active=true][data-state=review]{border-left-color:#b76512}.verification-card[data-active=true][data-state=busy]{border-left-color:#1875a3}}
@@ -144,10 +141,6 @@ li p+p{margin-top:5px}
       <label><input type="checkbox" id="roads-toggle" checked> Roads</label>
       <label><input type="checkbox" id="addresses-toggle" checked> <span>Address labels<span id="address-scale"></span></span></label>
     </div>
-    <label for="cluster-jump" id="cluster-navigation" hidden>Zoom to review area</label>
-    <select id="cluster-jump" aria-label="Zoom to review area" hidden>
-      <option value="">Choose an area</option>
-    </select>
     <span id="reference-status" role="status"></span>
   </div>
 </section>
@@ -156,7 +149,7 @@ li p+p{margin-top:5px}
   <ol>
     <li><div><strong>Check the spreadsheet.</strong><p>Enter the complete property address and unit, if applicable. A single normalized match completes the spreadsheet check. Use the case details and reason shown. If the spreadsheet has no clear match, continue to the map.</p></div></li>
     <li><div><strong>Check the location against the map.</strong><p>Use a single matching La Plata County address point. If the county lookup cannot locate the address, check an exact Esri address or unit match when offered. A point inside the red Housing Grid passes the map check. An address in a yellow flood damage review area needs OEM confirmation when it falls outside the Housing Grid.</p>
-    <p>Yellow areas are based on at least three distinct county address locations with documented minor damage, major damage, or destruction. The map groups neighboring damage locations within a half mile (2,640 feet) and shades the merged quarter-mile buffers (1,320 feet) around those locations in yellow. Review areas flag nearby homes for follow-up. Individual damage requires evidence for that home.</p></div></li>
+    <p>Every mapped spreadsheet location gets a yellow quarter-mile buffer (1,320 feet), including isolated points and rows shown at an approximate street location. The map groups neighboring points within a half mile (2,640 feet) and merges overlapping buffers. Rows without a map location cannot be buffered. Review areas flag nearby homes for follow-up. Individual damage requires evidence for that home.</p></div></li>
     <li><div><strong>Call OEM if the address is unresolved.</strong><p>Call <a href="tel:+19707599274">Rob Farino at 970-759-9274</a> first, then <a href="tel:+19707495273">Matthew Richardson at 970-749-5273</a>. Use this step when the address point is missing or ambiguous, the address is in a review area outside the grid, or the map check cannot confirm coverage.</p></div></li>
   </ol>
   <p id="sheet-status" role="status">Connecting to Google Sheets…</p>
@@ -347,31 +340,9 @@ const clusterLayer = L.geoJSON(null,{
   style:{color:'#ffdf4a',weight:3,fillColor:'#ffce42',fillOpacity:.49,className:'damage-cluster'}
 }).addTo(map);
 let clusterAreas = [];
-let clusterBounds = [];
-const reviewMarkerPane = map.createPane('cluster-markers');
-reviewMarkerPane.style.zIndex = 415;
-const reviewMarkers = L.layerGroup().addTo(map);
-function zoomToReviewArea(index) {
-  if (clusterBounds[index]?.isValid()) map.fitBounds(clusterBounds[index],{padding:[38,38],maxZoom:18});
-}
-$('cluster-jump').addEventListener('change',event=>{
-  if (event.target.value!=='') zoomToReviewArea(Number(event.target.value));
-});
-function toggleReviewMarkers() {
-  if (map.getZoom()<16) reviewMarkers.addTo(map);
-  else reviewMarkers.remove();
-}
-map.on('zoomend',toggleReviewMarkers);
-toggleReviewMarkers();
 function clearReviewAreas() {
   clusterLayer.clearLayers();
-  reviewMarkers.clearLayers();
   clusterAreas = [];
-  clusterBounds = [];
-  $('cluster-navigation').hidden = true;
-  $('cluster-jump').hidden = true;
-  $('cluster-jump').length = 1;
-  $('cluster-jump').selectedIndex = 0;
 }
 let clusterReady = Promise.resolve();
 const sheetMarkers = L.layerGroup().addTo(map);
@@ -402,7 +373,7 @@ const gridReady = getJSON(gridUrl,{where:'1=1',outFields:'FID',outSR:'4326',f:'g
     if (!coordinates.length) throw new Error('Empty dissolved grid');
     coverage = {type:'MultiPolygon',coordinates};
     grid.addData({type:'Feature',properties:{},geometry:coverage});
-    if (!focusMarkers.getLayers().length && map.getZoom()<13) map.fitBounds(grid.getBounds(),{padding:[20,20]});
+    if (!$('address').value.trim() && map.getZoom()<13) fitOverview();
   }).catch(()=>$('grid-label').textContent='Housing Grid unavailable');
 
 const numberPattern = /^\d+[A-Z]?(?:-\d+[A-Z]?)?$/;
@@ -453,7 +424,7 @@ function renderSheetStatus(extra='') {
   const missing = mapping.address < 0;
   $('sheet-status').textContent = missing ? 'Select the address column to run the spreadsheet check.' :
     sheetName + ' · ' + records.length + ' address rows ready.' +
-    (mapping.reason<0 ? ' Select the damage reason column to draw review areas.' : '');
+    (mapping.reason<0 ? ' Select the damage reason column to show it in spreadsheet results.' : '');
 }
 function loadRows(text, name) {
   const parsed = parseCSV(text);
@@ -632,8 +603,6 @@ const feetPerRadian = 20902231;
 const radians = Math.PI / 180;
 const neighborFeet = 2640;
 const bufferFeet = 1320;
-const minimumLocations = 3;
-const damageReasons = new Set(['MINOR DAMAGE','MAJOR DAMAGE','DESTROYED']);
 
 function groundDistance([lonA,latA], [lonB,latB]) {
   const haversine = Math.sin((latB-latA)*radians/2)**2 +
@@ -642,17 +611,16 @@ function groundDistance([lonA,latA], [lonB,latB]) {
 }
 
 function clusterLocations(locations) {
-  // Defined-distance clustering. Only core points expand a cluster.
+  // Group connected locations for map navigation, including one-point groups.
   const neighbors = locations.map(point=>locations.flatMap((other,index)=>
     groundDistance(point,other)<=neighborFeet ? [index] : []));
   const assigned = new Set();
   const clusters = [];
   for (let i=0;i<locations.length;i++) {
-    if (assigned.has(i) || neighbors[i].length<minimumLocations) continue;
+    if (assigned.has(i)) continue;
     const members = [i];
     assigned.add(i);
     for (const member of members) {
-      if (neighbors[member].length<minimumLocations) continue;
       for (const neighbor of neighbors[member]) {
         if (assigned.has(neighbor)) continue;
         members.push(neighbor);
@@ -680,35 +648,18 @@ function bufferRing([lon,lat]) {
 }
 
 function drawClusters(located) {
-  // A street-only fallback can display a sheet row but cannot establish a damage cluster.
-  const distinct = new Map();
-  for (const {record,point,streetOnly} of located) {
-    if (streetOnly || !damageReasons.has(key(record.reason))) continue;
+  const distinct = new Map(located.map(({point})=>{
     const coordinates = point.feature.geometry.coordinates;
-    distinct.set(coordinates.join(','),coordinates);
-  }
-  const groups = clusterLocations([...distinct.values()]).sort((a,b)=>
-    Math.max(...b.map(point=>point[1]))-Math.max(...a.map(point=>point[1])));
+    return [coordinates.join(','),coordinates];
+  }));
+  const groups = clusterLocations([...distinct.values()]);
   clusterAreas = groups.map(points=>({
     type:'MultiPolygon',
     coordinates:polygonClipping.union(...points.map(point=>[bufferRing(point)]))
   }));
-  clusterAreas.forEach((geometry,index)=>{
-    clusterLayer.addData({type:'Feature',geometry,properties:{}});
-    const points = groups[index];
-    const bounds = L.latLngBounds(geometry.coordinates.flat(2).map(([lon,lat])=>[lat,lon]));
-    clusterBounds.push(bounds);
-    const number = index+1;
-    const title = 'Review area '+number+' · '+points.length+' damage locations';
-    $('cluster-jump').add(new Option(title,String(index)));
-    L.marker(bounds.getCenter(),{
-      pane:'cluster-markers',title,alt:title,
-      icon:L.divIcon({className:'review-area-marker',html:String(number),iconSize:[27,27],iconAnchor:[13.5,13.5]})
-    }).on('click',()=>zoomToReviewArea(index)).addTo(reviewMarkers);
-  });
-  $('cluster-navigation').hidden = !clusterAreas.length;
-  $('cluster-jump').hidden = !clusterAreas.length;
-  $('cluster-label').textContent = clusterAreas.length ? 'Flood damage review areas · '+clusterAreas.length+' clusters' :
+  for (const geometry of clusterAreas) clusterLayer.addData({type:'Feature',geometry,properties:{}});
+  if (!$('address').value.trim() && map.getZoom()<13) fitOverview();
+  $('cluster-label').textContent = clusterAreas.length ? 'Flood damage review areas · '+clusterAreas.length+' areas' :
     'No flood damage review areas';
 }
 
@@ -832,7 +783,7 @@ async function checkLocation(point, generation, source) {
     card('oem','No call needed');
     showActiveStep('map');
   } else if (clusterAreas.some(area=>coveredBy(area,geometry.coordinates))) {
-    needsOEM('Near documented flood damage · Review',detail+' · In a flood damage review area.');
+    needsOEM('Near a spreadsheet location · Review',detail+' · Inside a yellow quarter-mile review area.');
   } else if (coverage) {
     needsOEM('Outside coverage',detail+' · Outside the Housing Grid and flood damage review areas.');
   } else {
@@ -973,10 +924,15 @@ function queueCheck(explicit) {
 showContacts();
 sheetPromise = loadSheet();
 $('try-esri').addEventListener('click',tryEsriAddress);
-$('reset-map').addEventListener('click',()=>{
-  $('cluster-jump').selectedIndex = 0;
-  map.fitBounds(grid.getBounds().isValid()?grid.getBounds():initialView,{padding:[12,12]});
-});
+function fitOverview() {
+  const bounds = L.latLngBounds([]);
+  for (const layer of [grid,clusterLayer]) {
+    const extent = layer.getBounds();
+    if (extent.isValid()) bounds.extend(extent);
+  }
+  map.fitBounds(bounds.isValid()?bounds:initialView,{padding:[20,20]});
+}
+$('reset-map').addEventListener('click',fitOverview);
 $('address').addEventListener('input',()=>queueCheck(false));
 $('search').addEventListener('submit',event=>{
   event.preventDefault();
