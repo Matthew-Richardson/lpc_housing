@@ -99,6 +99,7 @@ summary{cursor:pointer;font-weight:700;padding:12px 17px}
       <label for="secondary-phone">Matthew Richardson’s phone</label>
       <input id="secondary-phone" type="tel" autocomplete="off">
       <button>Save setup</button>
+      <p>Leave a field blank to restore its default.</p>
     </form>
     <p id="sheet-status" role="status">Connecting to Google Sheets…</p>
     <div class="tools">
@@ -254,7 +255,17 @@ const mappingFields = {
 };
 const labels = {address:'Address column',city:'City',state:'State',zip:'ZIP',caseNumber:'Case number',reason:'Reason',source:'Source'};
 let headings = [], rows = [], records = [], mapping = {}, sheetPromise, sheetGeneration = 0, sheetName = '', sheetError = '';
-let config = stored('lpc-housing-setup');
+const defaultSetup = {
+  sheet: 'https://docs.google.com/spreadsheets/d/1qF6ekS8P2r4T0NF_10JgRcF5P7s24qK2PXwMu9lv7Q4/edit?gid=0',
+  primary: '9707599274',
+  secondary: '9707495273'
+};
+const savedSetup = stored('lpc-housing-setup');
+let config = {
+  sheet: savedSetup.sheet || defaultSetup.sheet,
+  primary: savedSetup.primary || defaultSetup.primary,
+  secondary: savedSetup.secondary || defaultSetup.secondary
+};
 let storedMapping = stored('lpc-housing-columns');
 
 function stored(id) {
@@ -378,7 +389,8 @@ async function loadSheet() {
   }
 }
 async function getJSON(endpoint, query) {
-  const response = await fetch(endpoint+'?'+new URLSearchParams(query),{signal:AbortSignal.timeout(15000)});
+  const response = await fetch(endpoint+'?'+new URLSearchParams(query),
+    {cache:'no-store',signal:AbortSignal.timeout(15000)});
   if (!response.ok) throw new Error('Map service unavailable');
   const data = await response.json();
   if (data.error) throw new Error(data.error.message);
@@ -462,7 +474,11 @@ $('setup').addEventListener('submit',event=>{
     if (sheet) sheetReference(sheet);
     const primary = phone('primary'), secondary = phone('secondary');
     if ([primary,secondary].some(value=>value && !/^\d{10}$/.test(value))) throw new Error('Enter 10-digit OEM phone numbers.');
-    config = {sheet,primary,secondary};
+    config = {
+      sheet: sheet || defaultSetup.sheet,
+      primary: primary || defaultSetup.primary,
+      secondary: secondary || defaultSetup.secondary
+    };
     remember('lpc-housing-setup',config);
     showSetup();
     clearResult();
