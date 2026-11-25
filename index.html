@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La Plata Address Verification</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+<style>
+:root{font-family:Arial,sans-serif;color:#142838;background:#edf2f4;line-height:1.5;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0}
+main{max-width:1080px;margin:auto;padding:32px 24px 36px}
+header{margin-bottom:20px}
+.agency{margin:0 0 3px;color:#466572;font-size:.875rem;font-weight:700}
+h1,h2,p{margin:0} h1{font-size:clamp(1.9rem,5vw,2.6rem);line-height:1.15;letter-spacing:-.025em} h2{font-size:1.18rem}
+.work,.instructions,.settings{border:1px solid #c8d6de;background:white;border-radius:12px}
+form,.result{padding:15px 17px} label{font-weight:700}
+.search-row{display:flex;gap:9px;margin-top:6px}
+button,input,select{font:inherit;border-radius:7px;border:1px solid #879da9}
+input:not([type=file]),select{background:#fff;padding:9px 11px;color:inherit}
+#address{flex:1;min-width:0}
+button{cursor:pointer;padding:8px 14px;background:#fff;color:#173b4b;font-weight:700}
+#check{background:#124c60;border-color:#124c60;color:white;flex-shrink:0}
+button:disabled{opacity:.55;cursor:wait}
+:focus-visible{outline:3px solid #b16900;outline-offset:2px}
+.result{border-top:1px solid #d8e3e9;background:#f3f7f8}
+.result[data-state=pass]{background:#eaf6ee;color:#123e2b}
+.result[data-state=review]{background:#fff3de;color:#58360b}
+.result strong,.result p{display:block;overflow-wrap:anywhere}
+.result p+p{margin-top:4px}
+.map-frame{position:relative;border-top:1px solid #c8d6de;border-radius:0 0 11px 11px;overflow:hidden}
+#map{height:clamp(320px,49vh,520px);background:#e0e9e7;z-index:0}
+.map-key{position:absolute;top:12px;right:12px;display:flex;gap:7px;align-items:center;padding:5px 7px 5px 10px;border-radius:7px;background:#fff;box-shadow:0 1px 7px #13273745;font-size:.875rem;font-weight:700}
+.map-key i{width:13px;height:13px;background:#35d0d45c;border:2px solid #00767c;display:inline-block}
+.map-key button{font-size:inherit;padding:2px 7px;margin-left:5px}
+.instructions,.settings{margin-top:14px}
+.instructions{padding:15px 17px}
+ol{padding:0;margin:12px 0 0;list-style:none;counter-reset:step;display:grid;gap:11px}
+li{counter-increment:step;display:grid;grid-template-columns:25px 1fr;gap:10px}
+li::before{content:counter(step);border-radius:50%;background:#e0edf1;color:#154659;font-size:.85rem;font-weight:700;height:25px;text-align:center;line-height:25px}
+li p,.settings p{color:#405763}
+.contacts{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+.contacts a{display:grid;gap:0;padding:5px 10px;border:1px solid #d0dce3;border-radius:7px;color:#164c61;text-decoration:none;min-width:155px}
+.contacts a:hover span:last-child{text-decoration:underline}
+.contacts small{color:#405763;font-weight:700}
+.contacts span:last-child{font-weight:700}
+summary{cursor:pointer;font-weight:700;padding:12px 17px}
+.settings-body{padding:0 17px 13px}
+.tools,#mapping{display:flex;flex-wrap:wrap;gap:9px;margin:9px 0}
+#mapping label{display:grid;font-size:.875rem;gap:3px}
+.upload{display:grid;font-size:.875rem}
+.settings a{color:#16546a}
+@media(max-width:520px){main{padding:18px 10px 24px}.search-row{flex-wrap:wrap}#address{flex-basis:100%}.map-key{right:8px;top:8px}}
+#setup{display:grid;grid-template-columns:minmax(0,440px);gap:5px;padding:0 0 12px}
+#setup button{justify-self:start;margin-top:3px}
+</style>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+
+</head>
+<body>
+<main>
+<header>
+  <p class="agency">La Plata County Office of Emergency Management</p>
+  <h1>Address verification</h1>
+</header>
+<section class="work" aria-label="Address check">
+  <form id="search">
+    <label for="address">Property address</label>
+    <div class="search-row">
+      <input id="address" placeholder="123 Main St, Durango, CO 81301" autocomplete="off" required maxlength="180">
+      <button id="check">Check address</button>
+    </div>
+  </form>
+  <div id="result" class="result" role="status" aria-live="polite" hidden></div>
+  <div class="map-frame">
+    <div id="map" aria-label="La Plata County Housing Grid map"></div>
+    <div class="map-key"><i></i> <span id="grid-label">Housing Grid</span> <button type="button" id="reset-map">Reset view</button></div>
+  </div>
+</section>
+<section class="instructions" aria-labelledby="steps">
+  <h2 id="steps">Verification steps</h2>
+  <ol>
+    <li><div><strong>Check the spreadsheet</strong><p>Enter the property address, including the unit if there is one. If there’s one clear match, use the spreadsheet result. Otherwise, check the map.</p></div></li>
+    <li><div><strong>Check the map</strong><p>Map pass if the correct county address point falls inside the Housing Grid. If the location or coverage is unclear, call OEM.</p></div></li>
+    <li><div><strong>Call OEM</strong><div class="contacts">
+      <a id="primary-contact"><small>Primary</small><span>Rob Farino</span><span></span></a>
+      <a id="secondary-contact"><small>Secondary</small><span>Matthew Richardson</span><span></span></a>
+    </div></div></li>
+  </ol>
+</section>
+<details class="settings">
+  <summary>Setup and spreadsheet settings</summary>
+  <div class="settings-body">
+    <form id="setup">
+      <label for="sheet-link">Google Sheet link</label>
+      <input id="sheet-link" type="url" placeholder="https://docs.google.com/spreadsheets/d/…">
+      <label for="primary-phone">Rob Farino’s phone</label>
+      <input id="primary-phone" type="tel" autocomplete="off">
+      <label for="secondary-phone">Matthew Richardson’s phone</label>
+      <input id="secondary-phone" type="tel" autocomplete="off">
+      <button>Save setup</button>
+    </form>
+    <p id="sheet-status" role="status">Connecting to Google Sheets…</p>
+    <div class="tools">
+      <button type="button" id="refresh">Reload Google Sheet</button>
+      <label class="upload">Use a CSV export <input type="file" id="upload" accept=".csv,text/csv"></label>
+    </div>
+    <div id="mapping"></div>
+    <p><a id="open-sheet" target="_blank" rel="noopener noreferrer" hidden>Open Google Sheet</a></p>
+  </div>
+</details>
+</main>
+<script>
+const words = {
+  NORTH:'N', SOUTH:'S', EAST:'E', WEST:'W', NORTHEAST:'NE', NORTHWEST:'NW', SOUTHEAST:'SE', SOUTHWEST:'SW',
+  STREET:'ST', AVENUE:'AVE', AV:'AVE', BOULEVARD:'BLVD', CIRCLE:'CIR', CRCL:'CIR', COURT:'CT',
+  DRIVE:'DR', LANE:'LN', LOOP:'LOOP', ROAD:'RD', TERRACE:'TER', TRAIL:'TRL', WAY:'WAY',
+  PLACE:'PL', PARKWAY:'PKWY', HIGHWAY:'HWY', CRESCENT:'CRES', CROSSING:'XING', POINT:'PT',
+  RIDGE:'RDG', SQUARE:'SQ', ALLEY:'ALY', TURNPIKE:'TPKE', TRAILHEAD:'TRLHD', MOUNTAIN:'MTN'
+};
+const suffixes = new Set('ST AVE BLVD CIR CT DR LN LOOP RD TER TRL WAY PL PKWY HWY CRES XING PT RDG SQ ALY TPKE'.split(' '));
+const directions = new Set('N S E W NE NW SE SW'.split(' '));
+const knownCities = ['DURANGO','BAYFIELD','IGNACIO','HESPERUS','HERMOSA','MARVEL','REDMESA','BREENS','BREEN','KLINE','ALLISON','ARBOLES','VALLECITO','GEM VILLAGE','PAGOSA SPRINGS','SILVERTON','MANCOS','LA PLATA'];
+
+function key(value = '') {
+  return String(value).normalize('NFKD').replace(/\p{M}/gu,'').toUpperCase().trim().replace(/[^A-Z0-9]+/g,' ').trim();
+}
+
+function address(text, fields = {}) {
+  let value = String(text).trim().toUpperCase().replace(/[’']/g,'').replace(/\./g,'');
+  const postal = value.match(/(?:\s|,)(\d{5})(?:-\d{4})?$/);
+  if (postal) value = value.slice(0,postal.index).trim();
+  const state = value.match(/(?:\s|,)(CO|COLORADO|NM|NEW MEXICO|UT|UTAH|AZ|ARIZONA)$/);
+  if (state) value = value.slice(0,state.index).trim();
+  const parts = value.split(',').map(p=>p.trim()).filter(Boolean);
+  let city = fields.city || '';
+  if (parts.length > 1 && /^[A-Z ]+$/.test(parts.at(-1)) && !/^(APT|UNIT|STE|SUITE|LOT|BLDG|BUILDING|TRLR|TRAILER)\b/.test(parts.at(-1))) {
+    city ||= parts.pop();
+    if (city && parts.at(-1) === city) parts.pop();
+  }
+  value = parts.join(' ');
+  if (!city || knownCities.includes(key(city))) {
+    const cityAtEnd = knownCities.find(name=>value.endsWith(' '+name));
+    if (cityAtEnd) {
+      city ||= cityAtEnd;
+      if (key(city) === cityAtEnd) value = value.slice(0,-cityAtEnd.length).trim();
+    }
+  }
+  value = value
+    .replace(/\b(?:COUNTY\s+(?:ROAD|RD|ROUTE)|CO\s+(?:ROAD|RD|ROUTE)|C\s+R|CR)[\s-]*(?=\d)/g,'CR ')
+    .replace(/\b(?:US\s*(?:HIGHWAY|HWY|ROUTE)?|U\s+S)[\s-]*(?=\d)/g,'US ')
+    .replace(/\b(?:STATE\s+(?:HIGHWAY|HWY|ROUTE)|COLORADO\s+(?:HIGHWAY|HWY|ROUTE)|CO\s*(?:HIGHWAY|HWY|ROUTE)?|SH)[\s-]*(?=\d)/g,'CO ')
+    .replace(/\s+#\s*(?=\w)/g,' UNIT ')
+    .replace(/(#)(?=[A-Z0-9]+$)/,' UNIT ');
+  const unitMatch = value.match(/\s+(APT|APARTMENT|UNIT|STE|SUITE|LOT|BLDG|BUILDING|TRLR|TRAILER)\s*#?\s*([A-Z0-9]+(?:[- ][A-Z0-9]+)?)$/);
+  let unit = '';
+  if (unitMatch) {
+    const type = {LOT:'LOT',BLDG:'BLDG',BUILDING:'BLDG',TRLR:'TRLR',TRAILER:'TRLR'}[unitMatch[1]] || 'UNIT';
+    unit = type + ' ' + unitMatch[2].replace(/\s+/g,' ');
+    value = value.slice(0,unitMatch.index);
+  }
+  const tokens = (value.match(/[A-Z0-9]+(?:[-/][A-Z0-9]+)*/g) || []);
+  const afterDirection = words[tokens.at(-1)] || tokens.at(-1);
+  const suffixIndex = tokens.length - (directions.has(afterDirection) ? 2 : 1);
+  const suffix = words[tokens[suffixIndex]] || tokens[suffixIndex];
+  if (suffixIndex > 1 && (suffixes.has(suffix) || (suffix === 'CR' && tokens.length > 2))) tokens[suffixIndex] = suffix === 'CR' ? 'CIR' : suffix;
+  if (directions.has(afterDirection) && tokens.length >= 3) tokens[tokens.length - 1] = afterDirection;
+  const prefix = words[tokens[1]] || tokens[1];
+  if (tokens.length > 3 && directions.has(prefix)) tokens[1] = prefix;
+  const stateKey = key(fields.state || state?.[1] || '');
+  return {
+    street:tokens.join(' '), number:tokens[0] || '', unit, city:key(city),
+    state:({COLORADO:'CO','NEW MEXICO':'NM',UTAH:'UT',ARIZONA:'AZ'})[stateKey] || stateKey,
+    zip:String(fields.zip || postal?.[1] || '').match(/^\d{5}/)?.[0] || ''
+  };
+}
+
+function compare(input, record) {
+  if (input.street !== record.street) return false;
+  return ['unit','city','state','zip'].every(field=>!input[field] || !record[field] || input[field]===record[field])
+    && input.unit === record.unit;
+}
+
+function parseCSV(source) {
+  const rows = [];
+  let row = [], value = '', quoted = false;
+  const csv = source.replace(/^\uFEFF/,'');
+  for (let i = 0; i < csv.length; i++) {
+    const c = csv[i];
+    if (c === '"') {
+      if (quoted && csv[i+1] === '"') { value += '"'; i++; }
+      else if (quoted || !value) quoted = !quoted;
+      else value += c;
+    } else if (!quoted && c === ',') {
+      row.push(value.trim()); value = '';
+    } else if (!quoted && (c === '\r' || c === '\n')) {
+      row.push(value.trim()); rows.push(row); row = []; value = '';
+      if (c === '\r' && csv[i+1] === '\n') i++;
+    } else value += c;
+  }
+  if (quoted) throw new Error('The CSV contains an unfinished quoted field.');
+  if (row.length || value) rows.push([...row,value.trim()]);
+  return rows.filter(line=>line.some(Boolean));
+}
+
+function contains(ring, [x,y]) {
+  let inside = false;
+  for (let i = 0, j = ring.length-1; i < ring.length; j = i++) {
+    const [ax,ay] = ring[i], [bx,by] = ring[j];
+    const cross = (x-ax)*(by-ay) - (y-ay)*(bx-ax);
+    if (Math.abs(cross) < 1e-12 && x >= Math.min(ax,bx) && x <= Math.max(ax,bx) && y >= Math.min(ay,by) && y <= Math.max(ay,by)) return 2;
+    if ((ay > y) !== (by > y) && x < (bx-ax)*(y-ay)/(by-ay)+ax) inside = !inside;
+  }
+  return inside ? 1 : 0;
+}
+
+function coveredBy(geometry, point) {
+  if (!geometry) return false;
+  const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+  return polygons.some(([outer,...holes])=>contains(outer,point) && !holes.some(ring=>contains(ring,point)===1));
+}
+
+
+const $ = id => document.getElementById(id);
+const gridUrl = 'https://services2.arcgis.com/ilLrLpXfElYxSy9y/arcgis/rest/services/LPC_Housing_Grid/FeatureServer/0/query';
+const pointsUrl = 'https://gis.lpcgov.org/arcgis/rest/services/Operational_Layers/Search_and_Select_Query/MapServer/0/query';
+const gridPaint = {color:'#00d5dc',weight:2,fillOpacity:.16};
+const selectedPaint = {color:'#ffdf5d',weight:3,fillOpacity:.28};
+const initialView = L.latLngBounds([37.18,-108.02],[37.53,-107.73]);
+const map = L.map('map', {scrollWheelZoom:false, maxZoom:22}).fitBounds(initialView);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {maxNativeZoom:19, maxZoom:22, attribution:'Imagery © Esri and contributors'}).addTo(map);
+const grid = L.geoJSON(null, {style:gridPaint, onEachFeature(feature,layer) {
+  const label = document.createElement('div');
+  label.textContent = 'Housing Grid tile ' + feature.properties.TILELABEL;
+  layer.bindPopup(label);
+}}).addTo(map);
+const markers = L.layerGroup().addTo(map);
+let gridError = null;
+let gridFeatures = [];
+const gridReady = getJSON(gridUrl,{where:'1=1',outFields:'FID,TILELABEL,Planned',outSR:'4326',f:'geojson'})
+  .then(data=>{
+    if (!data.features?.length || data.exceededTransferLimit || data.properties?.exceededTransferLimit) throw new Error('Incomplete grid');
+    gridFeatures = data.features;
+    grid.addData(data);
+    if (map.getZoom() < 13) map.fitBounds(grid.getBounds(),{padding:[12,12]});
+  }).catch(error=>{gridError=error;$('grid-label').textContent='Housing Grid unavailable';});
+
+const mappingFields = {
+  address:['ADDR','ADDRESS','STREET ADDRESS','PROPERTY ADDRESS','SITUS ADDRESS','SITE ADDRESS','FULL ADDRESS','FULLADDR','ADDRESS1','ADDRESS 1'],
+  city:['CITY','MUNICIPALITY','POSTAL CITY'], state:['STATE','STATE ABBR'], zip:['ZIP','ZIP CODE','POSTAL CODE','ZIP5'],
+  caseNumber:['CASE NUMBER','CASE ID','CASENUMBER','CASE NO','CASE'],
+  reason:['REASON','DAMAGE','DAMAGE CATEGORY'], source:['SOURCE']
+};
+const labels = {address:'Address column',city:'City',state:'State',zip:'ZIP',caseNumber:'Case number',reason:'Reason',source:'Source'};
+let headings = [], rows = [], records = [], mapping = {}, sheetPromise, sheetGeneration = 0, sheetName = '', sheetError = '';
+let config = stored('lpc-housing-setup');
+let storedMapping = stored('lpc-housing-columns');
+
+function stored(id) {
+  try { return JSON.parse(localStorage.getItem(id)) || {}; } catch { return {}; }
+}
+function remember(id, value) {
+  try { localStorage.setItem(id, JSON.stringify(value)); } catch { /* The current tab still works. */ }
+}
+function consumeSetupLink() {
+  const values = new URLSearchParams(location.hash.slice(1));
+  if (!values.has('sheet') && !values.has('primary') && !values.has('secondary')) return;
+  const sheet = values.get('sheet');
+  if (sheet && /^[\w-]+(?::\d+)?$/.test(sheet)) {
+    const [id,gid='0'] = sheet.split(':');
+    config.sheet = 'https://docs.google.com/spreadsheets/d/'+id+'/edit?gid='+gid;
+  }
+  for (const role of ['primary','secondary']) {
+    const phone = values.get(role);
+    if (phone && /^\d{10}$/.test(phone)) config[role] = phone;
+  }
+  remember('lpc-housing-setup',config);
+  history.replaceState(null,'',location.pathname+location.search);
+}
+function showSetup() {
+  $('sheet-link').value = config.sheet || '';
+  $('open-sheet').hidden = !config.sheet;
+  if (config.sheet) $('open-sheet').href = config.sheet;
+  for (const role of ['primary','secondary']) {
+    const phone = config[role] || '';
+    $(role+'-phone').value = phone;
+    const contact = $(role+'-contact');
+    if (/^\d{10}$/.test(phone)) {
+      contact.href = 'tel:+1'+phone;
+      contact.lastElementChild.textContent = phone.replace(/^(\d{3})(\d{3})(\d{4})$/,'$1-$2-$3');
+    } else {
+      contact.removeAttribute('href');
+      contact.lastElementChild.textContent = 'Number not configured';
+    }
+  }
+}
+function sheetReference(value) {
+  const link = new URL(value.trim());
+  const match = link.pathname.match(/^\/spreadsheets\/d\/([\w-]+)(?:\/|$)/);
+  if (link.origin !== 'https://docs.google.com' || !match) throw new Error('Enter a Google Sheets link.');
+  const gid = link.searchParams.get('gid') || new URLSearchParams(link.hash.slice(1)).get('gid') || '0';
+  if (!/^\d+$/.test(gid)) throw new Error('The Google Sheet tab ID is invalid.');
+  return {id:match[1],gid};
+}
+function renderSheetStatus(extra='') {
+  if (extra) { $('sheet-status').textContent = extra; return; }
+  const missing = mapping.address < 0;
+  $('sheet-status').textContent = missing ? 'Select the address column to run the spreadsheet check.' :
+    sheetName + ' · ' + records.length + ' address rows ready.';
+}
+function loadRows(text, name) {
+  const parsed = parseCSV(text);
+  if (!parsed.length || parsed[0].length < 2 || /^\s*</.test(text)) throw new Error('The spreadsheet CSV could not be read.');
+  [headings,...rows] = parsed;
+  sheetName = name;
+  sheetError = '';
+  mapping = Object.fromEntries(Object.entries(mappingFields).map(([field, aliases])=>{
+    const saved = storedMapping[field];
+    const restored = saved === '' ? -1 : headings.findIndex(title=>title && title===saved);
+    return [field,saved === '' || restored >= 0 ? restored : headings.findIndex(title=>aliases.includes(key(title)))];
+  }));
+  renderMapping();
+  reindex();
+  if (mapping.address < 0) document.querySelector('.settings').open = true;
+}
+function reindex() {
+  records = rows.map(row=>{
+    const read = field=>mapping[field] < 0 ? '' : row[mapping[field]] || '';
+    return {address:read('address'), caseNumber:read('caseNumber'), reason:read('reason'), source:read('source'),
+      normalized:address(read('address'),{city:read('city'),state:read('state'),zip:read('zip')})};
+  }).filter(row=>row.normalized.number && row.normalized.street.includes(' '));
+  renderSheetStatus();
+}
+function renderMapping() {
+  $('mapping').replaceChildren();
+  for (const field of Object.keys(mappingFields)) {
+    const label = document.createElement('label');
+    label.textContent = labels[field];
+    const select = document.createElement('select');
+    select.add(new Option(field==='address' ? 'Select a column' : 'None','-1'));
+    headings.forEach((title,i)=>{if(title) select.add(new Option(title,String(i)));});
+    select.value = String(mapping[field]);
+    select.addEventListener('change',()=>{
+      mapping[field] = Number(select.value);
+      storedMapping[field] = headings[mapping[field]] || '';
+      remember('lpc-housing-columns',storedMapping);
+      reindex();
+      clearResult();
+    });
+    label.append(select);
+    $('mapping').append(label);
+  }
+}
+function resetSheet(message) {
+  sheetError = message;
+  records = [];
+  mapping = {address:-1};
+  $('mapping').replaceChildren();
+  renderSheetStatus(message);
+}
+async function loadSheet() {
+  const generation = ++sheetGeneration;
+  if (!config.sheet) {
+    resetSheet('Enter the Google Sheet link or use a CSV export.');
+    return;
+  }
+  resetSheet('Connecting to Google Sheets…');
+  try {
+    const {id,gid} = sheetReference(config.sheet);
+    const response = await fetch('https://docs.google.com/spreadsheets/d/'+id+'/export?format=csv&gid='+gid,
+      {cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(12000)});
+    if (!response.ok) throw new Error();
+    const text = await response.text();
+    if (generation === sheetGeneration) loadRows(text,'Google Sheet');
+  } catch {
+    if (generation === sheetGeneration) resetSheet('Google Sheet unavailable. Reload it or use a CSV export.');
+  }
+}
+async function getJSON(endpoint, query) {
+  const response = await fetch(endpoint+'?'+new URLSearchParams(query),{signal:AbortSignal.timeout(15000)});
+  if (!response.ok) throw new Error('Map service unavailable');
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message);
+  return data;
+}
+function showResult(title, lines = [], state = '') {
+  const output = $('result');
+  output.replaceChildren();
+  output.dataset.state = state;
+  const heading = document.createElement('strong');
+  heading.textContent = title;
+  output.append(heading);
+  for (const line of lines) {
+    const p = document.createElement('p');
+    p.textContent = line;
+    output.append(p);
+  }
+  output.hidden = false;
+}
+function clearResult() {
+  $('result').hidden = true;
+  markers.clearLayers();
+  grid.setStyle(gridPaint);
+}
+function markPoints(features) {
+  const bounds = L.latLngBounds([]);
+  for (const feature of features) {
+    const [lon,lat] = feature.geometry.coordinates;
+    const position = [lat,lon];
+    const label = document.createElement('span');
+    label.textContent = feature.properties.PROPERTY_A;
+    L.circleMarker(position,{radius:9,color:'#2c2300',weight:2,fillColor:'#ffdf5d',fillOpacity:1})
+      .addTo(markers).bindPopup(label);
+    bounds.extend(position);
+  }
+  if (bounds.isValid()) map.fitBounds(bounds,{padding:[44,44],maxZoom:17});
+}
+async function mapCheck(input, sheetStatus) {
+  showResult('Step 2 · Checking the map',[sheetStatus]);
+  try {
+    // The house number is validated before this lookup. Full strings are normalized locally.
+    const data = await getJSON(pointsUrl,{where:"UPPER(PROPERTY_A) LIKE '"+input.number+" %'",
+      outFields:'PROPERTY_A,OBJECTID',outSR:'4326',f:'geojson'});
+    if (!Array.isArray(data.features) || data.exceededTransferLimit || data.properties?.exceededTransferLimit) throw new Error('Incomplete address lookup');
+    const street = data.features.filter(feature=>feature.geometry?.type==='Point' && address(feature.properties.PROPERTY_A).street===input.street);
+    const matches = street.filter(feature=>address(feature.properties.PROPERTY_A).unit===input.unit);
+    markPoints(matches.length ? matches : street);
+    if (matches.length!==1 || (!input.unit && street.length>1)) {
+      const explanation = matches.length>1 || (!input.unit && street.length>1) ?
+        'Several county address points match. Include the unit if there is one.' :
+        street.length ? 'The street address was found, but the unit could not be confirmed.' : 'No matching county address point was found.';
+      showResult('Step 3 · Call OEM',[sheetStatus,explanation],'review');
+      return;
+    }
+    await gridReady;
+    if (gridError) throw gridError;
+    const point = matches[0];
+    const tiles = gridFeatures.filter(tile=>coveredBy(tile.geometry,point.geometry.coordinates));
+    if (!tiles.length) {
+      showResult('Step 3 · Call OEM',[sheetStatus,point.properties.PROPERTY_A+' is outside the Housing Grid.'],'review');
+      return;
+    }
+    const selected = new Set(tiles.map(tile=>tile.properties.FID));
+    grid.eachLayer(layer=>{if (selected.has(layer.feature.properties.FID)) layer.setStyle(selectedPaint);});
+    showResult('Step 2 · Map pass',[sheetStatus,point.properties.PROPERTY_A+' is inside the Housing Grid.',
+      'Grid '+(tiles.length===1?'tile ':'tiles ')+tiles.map(tile=>tile.properties.TILELABEL).join(', ')],'pass');
+  } catch {
+    showResult('Step 3 · Call OEM',[sheetStatus,'The county address or Housing Grid service could not complete the check.'],'review');
+  }
+}
+
+consumeSetupLink();
+showSetup();
+document.querySelector('.settings').open = !config.sheet;
+sheetPromise = loadSheet();
+$('setup').addEventListener('submit',event=>{
+  event.preventDefault();
+  const sheet = $('sheet-link').value.trim();
+  const phone = role=>$(role+'-phone').value.replace(/\D/g,'').replace(/^1(?=\d{10}$)/,'');
+  try {
+    if (sheet) sheetReference(sheet);
+    const primary = phone('primary'), secondary = phone('secondary');
+    if ([primary,secondary].some(value=>value && !/^\d{10}$/.test(value))) throw new Error('Enter 10-digit OEM phone numbers.');
+    config = {sheet,primary,secondary};
+    remember('lpc-housing-setup',config);
+    showSetup();
+    clearResult();
+    sheetPromise = loadSheet();
+  } catch (error) {
+    renderSheetStatus(error.message);
+  }
+});
+$('refresh').addEventListener('click',()=>{clearResult();sheetPromise=loadSheet();});
+$('upload').addEventListener('change',async event=>{
+  const file = event.target.files[0];
+  if (!file) return;
+  const generation = ++sheetGeneration;
+  clearResult();
+  sheetPromise = (async ()=>{
+    try {
+      const text = await file.text();
+      if (generation === sheetGeneration) loadRows(text,'CSV export');
+    } catch {
+      if (generation === sheetGeneration) resetSheet('The CSV could not be read.');
+    } finally { event.target.value=''; }
+  })();
+});
+$('reset-map').addEventListener('click',()=>map.fitBounds(grid.getBounds().isValid()?grid.getBounds():initialView,{padding:[12,12]}));
+$('search').addEventListener('submit',async event=>{
+  event.preventDefault();
+  if ($('check').disabled) return;
+  const input = address($('address').value);
+  clearResult();
+  if (!/^\d+[A-Z]?(?:-\d+[A-Z]?)?$/.test(input.number) || !input.street.includes(' ')) {
+    showResult('Enter a street address with a house number.',[],'review');
+    return;
+  }
+  $('check').disabled = true;
+  $('address').readOnly = true;
+  showResult('Step 1 · Checking the spreadsheet');
+  try {
+    await sheetPromise;
+    const matches = records.filter(record=>compare(input,record.normalized));
+    const relatedUnits = records.some(record=>!input.unit && record.normalized.unit &&
+      compare(input,{...record.normalized,unit:''}));
+    if (matches.length===1 && !relatedUnits) {
+      const match = matches[0];
+      const details = [match.address,match.normalized.city,match.normalized.state,match.normalized.zip].filter(Boolean).join(' · ');
+      showResult('Step 1 · Spreadsheet match',[details,
+        [match.caseNumber && 'Case '+match.caseNumber,match.reason,match.source].filter(Boolean).join(' · ')].filter(Boolean),'pass');
+      return;
+    }
+    const status = sheetError ? 'Spreadsheet check unavailable.' : mapping.address<0 ? 'Spreadsheet address column needs setup.' :
+      matches.length>1 || relatedUnits ? 'No single clear spreadsheet match.' : 'No spreadsheet match.';
+    await mapCheck(input,status);
+  } finally { $('check').disabled=false; $('address').readOnly=false; }
+});
+</script>
+</body>
+</html>
