@@ -15,25 +15,37 @@ header{display:flex;align-items:center;flex-wrap:wrap;gap:12px 22px;margin-botto
 .agency{margin:0 0 3px;color:#466572;font-size:.875rem;font-weight:700}
 h1,h2,p{margin:0} h1{font-size:clamp(1.9rem,5vw,2.6rem);line-height:1.15;letter-spacing:-.025em} h2{font-size:1.18rem}
 .work,.instructions,.settings{border:1px solid #c8d6de;background:white;border-radius:12px}
-form,.result{padding:15px 17px} label{font-weight:700}
+form{padding:15px 17px} label{font-weight:700}
 .search-row{display:flex;gap:9px;margin-top:6px}
 button,input,select{font:inherit;border-radius:7px;border:1px solid #879da9}
 input:not([type=file]),select{background:#fff;padding:9px 11px;color:inherit}
 #address{flex:1;min-width:0}
+#address-suggestions{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+#address-suggestions[hidden]{display:none}
+#address-suggestions button,.popup-address{font-size:.875rem;padding:4px 8px;text-align:left}
 button{cursor:pointer;padding:8px 14px;background:#fff;color:#173b4b;font-weight:700}
 #check{background:#124c60;border-color:#124c60;color:white;flex-shrink:0}
 button:disabled{opacity:.55;cursor:wait}
 :focus-visible{outline:3px solid #b16900;outline-offset:2px}
-.result{border-top:1px solid #d8e3e9;background:#f3f7f8}
-.result[data-state=pass]{background:#eaf6ee;color:#123e2b}
-.result[data-state=review]{background:#fff3de;color:#58360b}
-.result strong,.result p{display:block;overflow-wrap:anywhere}
-.result p+p{margin-top:4px}
-.map-frame{position:relative;border-top:1px solid #c8d6de;border-radius:0 0 11px 11px;overflow:hidden}
-#map{height:clamp(320px,49vh,520px);background:#e0e9e7;z-index:0}
-.map-key{position:absolute;top:12px;right:12px;display:flex;gap:7px;align-items:center;padding:5px 7px 5px 10px;border-radius:7px;background:#fff;box-shadow:0 1px 7px #13273745;font-size:.875rem;font-weight:700}
-.map-key i{width:13px;height:13px;background:#35d0d45c;border:2px solid #00767c;display:inline-block}
-.map-key button{font-size:inherit;padding:2px 7px;margin-left:5px}
+.verification{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:0 17px 15px}
+.verification-card{min-width:0;padding:11px 12px 12px;border:1px solid #c8d6de;border-top:4px solid #78929e;border-radius:8px;background:#f3f7f8}
+.verification-card h2{display:flex;align-items:center;gap:6px;font-size:.925rem;margin-bottom:4px;color:#284e60}
+.verification-card h2 span{display:inline-grid;place-items:center;width:22px;height:22px;background:#deeaee;border-radius:50%}
+.verification-card strong{display:block;font-size:1.18rem;line-height:1.25;overflow-wrap:anywhere}
+.verification-card p{margin-top:4px;color:#405763;font-size:.925rem;overflow-wrap:anywhere}
+.verification-card[data-state=pass]{border-top-color:#23844f;background:#e9f7ee;color:#135132}
+.verification-card[data-state=review]{border-top-color:#b76512;background:#fff3df;color:#603907}
+.verification-card[data-state=busy]{border-top-color:#1875a3;background:#ebf5fc}
+.map-frame{position:relative;border-block:1px solid #c8d6de;overflow:hidden}
+#map{height:clamp(340px,50vh,520px);background:#e0e9e7;z-index:0}
+.reset-map{position:absolute;top:10px;right:10px;padding:3px 8px;box-shadow:0 1px 5px #13273745;font-size:.9rem}
+.map-key{display:flex;flex-wrap:wrap;align-items:center;gap:5px 17px;padding:7px 17px;font-size:.875rem;font-weight:700}
+.map-key>span{display:inline-flex;align-items:center;gap:7px}
+.map-key i{display:inline-block;width:13px;height:13px;flex:none}
+.coverage-key{background:repeating-linear-gradient(45deg,#fff0f0,#fff0f0 3px,#e35359 3px,#e35359 5px);border:1px solid #b02931}
+.points-key{background:#1578d5;border:1px solid #0f589d;border-radius:50%}
+.housing-coverage{fill:url(#coverage-hatch)}
+.popup-address{display:block;width:100%;margin-top:4px}
 .instructions,.settings{margin-top:14px}
 .instructions{padding:15px 17px}
 ol{padding:0;margin:12px 0 0;list-style:none;counter-reset:step;display:grid;gap:11px}
@@ -41,7 +53,7 @@ li{counter-increment:step;display:grid;grid-template-columns:25px 1fr;gap:10px}
 li::before{content:counter(step);border-radius:50%;background:#e0edf1;color:#154659;font-size:.85rem;font-weight:700;height:25px;text-align:center;line-height:25px}
 li p,.settings p{color:#405763}
 .contacts{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
-.contacts a{display:grid;gap:0;padding:5px 10px;border:1px solid #d0dce3;border-radius:7px;color:#164c61;text-decoration:none;min-width:155px}
+.contacts a{display:grid;gap:0;padding:4px 7px;border:1px solid #c8d6de;background:#fff;border-radius:7px;color:#164c61;text-decoration:none;font-size:.875rem;white-space:nowrap}
 .contacts a:hover span:last-child{text-decoration:underline}
 .contacts small{color:#405763;font-weight:700}
 .contacts span:last-child{font-weight:700}
@@ -51,12 +63,15 @@ summary{cursor:pointer;font-weight:700;padding:12px 17px}
 #mapping label{display:grid;font-size:.875rem;gap:3px}
 .upload{display:grid;font-size:.875rem}
 .settings a{color:#16546a}
-@media(max-width:520px){main{padding:18px 10px 24px}.search-row{flex-wrap:wrap}#address{flex-basis:100%}.map-key{right:8px;top:8px}}
+@media(max-width:780px){.verification-card .contacts{gap:5px}}
+@media(max-width:620px){main{padding:18px 10px 24px}.verification{grid-template-columns:1fr;gap:6px}.verification-card{border-top-width:1px;border-left:4px solid #78929e;padding:6px 10px}.verification-card[data-state=pass]{border-left-color:#23844f}.verification-card[data-state=review]{border-left-color:#b76512}.verification-card[data-state=busy]{border-left-color:#1875a3}}
+@media(max-width:380px){.search-row{flex-wrap:wrap}#address{flex-basis:100%}}
 #setup{display:grid;grid-template-columns:minmax(0,440px);gap:5px;padding:0 0 12px}
 #setup button{justify-self:start;margin-top:3px}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
 
+<script src="https://unpkg.com/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js" integrity="sha256-f4YZ6EqGzo3UAMm1BDDpyM+PJgJ7Ge60efEJ9cGp1og=" crossorigin="anonymous"></script>
 </head>
 <body>
 <main>
@@ -74,11 +89,35 @@ summary{cursor:pointer;font-weight:700;padding:12px 17px}
       <input id="address" placeholder="123 Main St, Durango, CO 81301" autocomplete="off" required maxlength="180">
       <button id="check">Check address</button>
     </div>
+    <div id="address-suggestions" aria-label="Matching spreadsheet addresses" hidden></div>
   </form>
-  <div id="result" class="result" role="status" aria-live="polite" hidden></div>
+  <section class="verification" aria-label="Verification results" aria-live="polite" aria-atomic="true">
+    <article class="verification-card" id="sheet-card">
+      <h2><span>1</span> Spreadsheet</h2>
+      <strong id="sheet-result">Enter an address</strong>
+      <p id="sheet-detail">Checks the primary address list first.</p>
+    </article>
+    <article class="verification-card" id="map-card">
+      <h2><span>2</span> Map check</h2>
+      <strong id="map-result">Waiting for address</strong>
+      <p id="map-detail">Checks the address point against the red coverage boundary.</p>
+    </article>
+    <article class="verification-card" id="oem-card">
+      <h2><span>3</span> Call OEM</h2>
+      <strong id="oem-result">If unresolved</strong>
+      <div class="contacts">
+        <a id="primary-contact"><small>Primary</small><span>Rob Farino</span><span></span></a>
+        <a id="secondary-contact"><small>Secondary</small><span>Matthew Richardson</span><span></span></a>
+      </div>
+    </article>
+  </section>
   <div class="map-frame">
-    <div id="map" aria-label="La Plata County Housing Grid map"></div>
-    <div class="map-key"><i></i> <span id="grid-label">Housing Grid</span> <button type="button" id="reset-map">Reset view</button></div>
+    <div id="map" aria-label="Spreadsheet address points and La Plata County Housing Grid coverage"></div>
+    <button type="button" id="reset-map" class="reset-map">Reset view</button>
+  </div>
+  <div class="map-key">
+    <span><i class="coverage-key"></i><span id="grid-label">Housing Grid coverage</span></span>
+    <span><i class="points-key"></i><span id="point-label">Loading spreadsheet addresses…</span></span>
   </div>
 </section>
 <section class="instructions" aria-labelledby="steps">
@@ -86,10 +125,7 @@ summary{cursor:pointer;font-weight:700;padding:12px 17px}
   <ol>
     <li><div><strong>Check the spreadsheet</strong><p>Enter the property address, including the unit if there is one. If there’s one clear match, use the spreadsheet result. Otherwise, check the map.</p></div></li>
     <li><div><strong>Check the map</strong><p>Map pass if the correct county address point falls inside the Housing Grid. If the location or coverage is unclear, call OEM.</p></div></li>
-    <li><div><strong>Call OEM</strong><div class="contacts">
-      <a id="primary-contact"><small>Primary</small><span>Rob Farino</span><span></span></a>
-      <a id="secondary-contact"><small>Secondary</small><span>Matthew Richardson</span><span></span></a>
-    </div></div></li>
+    <li><div><strong>Call OEM</strong><p>If neither check confirms the address, call the primary contact above, then the secondary.</p></div></li>
   </ol>
 </section>
 <details class="settings">
@@ -134,14 +170,14 @@ function key(value = '') {
 function address(text, fields = {}) {
   let value = String(text).trim().toUpperCase().replace(/[’']/g,'').replace(/\./g,'');
   const postal = value.match(/(?:\s|,)(\d{5})(?:-\d{4})?$/);
-  if (postal) value = value.slice(0,postal.index).trim();
+  if (postal) value = value.slice(0,postal.index).replace(/[,\s]+$/,'');
   const state = value.match(/(?:\s|,)(CO|COLORADO|NM|NEW MEXICO|UT|UTAH|AZ|ARIZONA)$/);
-  if (state) value = value.slice(0,state.index).trim();
+  if (state) value = value.slice(0,state.index).replace(/[,\s]+$/,'');
   const parts = value.split(',').map(p=>p.trim()).filter(Boolean);
   let city = fields.city || '';
   if (parts.length > 1 && /^[A-Z ]+$/.test(parts.at(-1)) && !/^(APT|UNIT|STE|SUITE|LOT|BLDG|BUILDING|TRLR|TRAILER)\b/.test(parts.at(-1))) {
-    city ||= parts.pop();
-    if (city && parts.at(-1) === city) parts.pop();
+    if (!city || key(city)===key(parts.at(-1))) city ||= parts.at(-1);
+    if (key(city)===key(parts.at(-1))) parts.pop();
   }
   value = parts.join(' ');
   if (!city || knownCities.includes(key(city))) {
@@ -172,9 +208,14 @@ function address(text, fields = {}) {
   if (directions.has(afterDirection) && tokens.length >= 3) tokens[tokens.length - 1] = afterDirection;
   const prefix = words[tokens[1]] || tokens[1];
   if (tokens.length > 3 && directions.has(prefix)) tokens[1] = prefix;
+
+  let street = tokens.join(' ');
+  street = street.replace(/^(\d+[A-Z]?) (?:N (?:US|HWY) 550|(?:US|HWY) 550 N)$/, '$1 N US 550');
+  street = street.replace(/^(\d+[A-Z]?) HWY 550$/, '$1 US 550');
+  street = street.replace(/^(\d+[A-Z]?) TRIMBLE (?:CROSSING|XING)(?: DR)?$/, '$1 TRIMBLE XING');
   const stateKey = key(fields.state || state?.[1] || '');
   return {
-    street:tokens.join(' '), number:tokens[0] || '', unit, city:key(city),
+    street, number:tokens[0] || '', unit, city:key(city),
     state:({COLORADO:'CO','NEW MEXICO':'NM',UTAH:'UT',ARIZONA:'AZ'})[stateKey] || stateKey,
     zip:String(fields.zip || postal?.[1] || '').match(/^\d{5}/)?.[0] || ''
   };
@@ -229,27 +270,54 @@ function coveredBy(geometry, point) {
 const $ = id => document.getElementById(id);
 const gridUrl = 'https://services2.arcgis.com/ilLrLpXfElYxSy9y/arcgis/rest/services/LPC_Housing_Grid/FeatureServer/0/query';
 const pointsUrl = 'https://gis.lpcgov.org/arcgis/rest/services/Operational_Layers/Search_and_Select_Query/MapServer/0/query';
-const gridPaint = {color:'#00d5dc',weight:2,fillOpacity:.16};
-const selectedPaint = {color:'#ffdf5d',weight:3,fillOpacity:.28};
 const initialView = L.latLngBounds([37.18,-108.02],[37.53,-107.73]);
-const map = L.map('map', {scrollWheelZoom:false, maxZoom:22}).fitBounds(initialView);
+const map = L.map('map', {scrollWheelZoom:false,maxZoom:22}).fitBounds(initialView);
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  {maxNativeZoom:19, maxZoom:22, attribution:'Imagery © Esri and contributors'}).addTo(map);
-const grid = L.geoJSON(null, {style:gridPaint, onEachFeature(feature,layer) {
-  const label = document.createElement('div');
-  label.textContent = 'Housing Grid tile ' + feature.properties.TILELABEL;
-  layer.bindPopup(label);
-}}).addTo(map);
-const markers = L.layerGroup().addTo(map);
-let gridError = null;
-let gridFeatures = [];
-const gridReady = getJSON(gridUrl,{where:'1=1',outFields:'FID,TILELABEL,Planned',outSR:'4326',f:'geojson'})
+  {maxNativeZoom:19,maxZoom:22,attribution:'Imagery © Esri and contributors'}).addTo(map);
+map.createPane('sheet-points').style.zIndex = 410;
+map.createPane('selected-points').style.zIndex = 420;
+const gridRenderer = L.svg().addTo(map);
+const grid = L.geoJSON(null,{
+  renderer:gridRenderer,
+  interactive:false,
+  style:{color:'#ff6669',weight:2.5,opacity:1,fill:true,fillOpacity:1,className:'housing-coverage'}
+}).addTo(map);
+const sheetMarkers = L.layerGroup().addTo(map);
+const focusMarkers = L.layerGroup().addTo(map);
+let coverage;
+
+function addHatch() {
+  const svg = $('map').querySelector('svg.leaflet-zoom-animated');
+  const element = (tag, attributes) => {
+    const node = document.createElementNS('http://www.w3.org/2000/svg',tag);
+    for (const [key,value] of Object.entries(attributes)) node.setAttribute(key,value);
+    return node;
+  };
+  const defs = element('defs',{});
+  const pattern = element('pattern',{id:'coverage-hatch',width:9,height:9,patternUnits:'userSpaceOnUse',patternTransform:'rotate(45)'});
+  pattern.append(element('rect',{width:9,height:9,fill:'#a90d1c','fill-opacity':'.19'}),
+    element('path',{d:'M 0 0 V 9',stroke:'#ff6669','stroke-width':'2','stroke-opacity':'.65'}));
+  defs.append(pattern);
+  svg.prepend(defs);
+}
+addHatch();
+const gridReady = getJSON(gridUrl,{where:'1=1',outFields:'FID',outSR:'4326',f:'geojson'})
   .then(data=>{
     if (!data.features?.length || data.exceededTransferLimit || data.properties?.exceededTransferLimit) throw new Error('Incomplete grid');
-    gridFeatures = data.features;
-    grid.addData(data);
-    if (map.getZoom() < 13) map.fitBounds(grid.getBounds(),{padding:[12,12]});
-  }).catch(error=>{gridError=error;$('grid-label').textContent='Housing Grid unavailable';});
+    const tiles = data.features.map(feature=>feature.geometry);
+    if (tiles.some(geometry=>!geometry || !['Polygon','MultiPolygon'].includes(geometry.type))) throw new Error('Invalid grid');
+    const coordinates = polygonClipping.union(...tiles.map(geometry=>geometry.coordinates));
+    if (!coordinates.length) throw new Error('Empty dissolved grid');
+    coverage = {type:'MultiPolygon',coordinates};
+    grid.addData({type:'Feature',properties:{},geometry:coverage});
+    if (!focusMarkers.getLayers().length && map.getZoom()<13) map.fitBounds(grid.getBounds(),{padding:[20,20]});
+  }).catch(()=>$('grid-label').textContent='Housing Grid unavailable');
+
+const numberPattern = /^\d+[A-Z]?(?:-\d+[A-Z]?)?$/;
+let countyIndexPromise;
+let markerGeneration = 0;
+let searchGeneration = 0;
+let searchTimer;
 
 const mappingFields = {
   address:['ADDR','ADDRESS','STREET ADDRESS','PROPERTY ADDRESS','SITUS ADDRESS','SITE ADDRESS','FULL ADDRESS','FULLADDR','ADDRESS1','ADDRESS 1'],
@@ -346,6 +414,7 @@ function reindex() {
       normalized:address(read('address'),{city:read('city'),state:read('state'),zip:read('zip')})};
   }).filter(row=>row.normalized.number && row.normalized.street.includes(' '));
   renderSheetStatus();
+  void populateSheetPoints();
 }
 function renderMapping() {
   $('mapping').replaceChildren();
@@ -361,7 +430,7 @@ function renderMapping() {
       storedMapping[field] = headings[mapping[field]] || '';
       remember('lpc-housing-columns',storedMapping);
       reindex();
-      clearResult();
+      queueCheck(false);
     });
     label.append(select);
     $('mapping').append(label);
@@ -370,6 +439,7 @@ function renderMapping() {
 function resetSheet(message) {
   sheetError = message;
   records = [];
+  void populateSheetPoints();
   mapping = {address:-1};
   $('mapping').replaceChildren();
   renderSheetStatus(message);
@@ -400,70 +470,285 @@ async function getJSON(endpoint, query) {
   if (data.error) throw new Error(data.error.message);
   return data;
 }
-function showResult(title, lines = [], state = '') {
-  const output = $('result');
-  output.replaceChildren();
-  output.dataset.state = state;
+function loadCountyAddressIndex() {
+  if (countyIndexPromise) return countyIndexPromise;
+  countyIndexPromise = (async ()=>{
+    const {objectIds} = await getJSON(pointsUrl,{where:'1=1',returnIdsOnly:true,f:'json'});
+    if (!Array.isArray(objectIds) || !objectIds.length) throw new Error('Address IDs unavailable');
+    const ids = [...objectIds].sort((a,b)=>a-b);
+    const pageSize = 2000;
+    const ranges = [];
+    for (let i=0;i<ids.length;i+=pageSize) {
+      ranges.push([ids[i],ids[Math.min(i+pageSize,ids.length)-1]]);
+    }
+    const index = new Map();
+    async function loadRange([first,last]) {
+      // Only server-supplied object IDs are used in queries. Addresses are compared locally.
+      const query = {where:'OBJECTID >= '+first+' AND OBJECTID <= '+last,
+        outFields:'PROPERTY_A,OBJECTID',returnGeometry:true,outSR:4326,f:'json'};
+      let page;
+      for (let attempt=0;attempt<2;attempt++) {
+        try {
+          page = await getJSON(pointsUrl,query);
+          if (!Array.isArray(page.features) || page.exceededTransferLimit) throw new Error('Incomplete address index');
+          break;
+        } catch (error) {
+          if (attempt===1) throw error;
+        }
+      }
+      for (const {attributes,geometry} of page.features) {
+        if (!attributes?.PROPERTY_A || !Number.isFinite(geometry?.x) || !Number.isFinite(geometry?.y)) continue;
+        const normalized = address(attributes.PROPERTY_A);
+        const feature = {properties:attributes,geometry:{coordinates:[geometry.x,geometry.y]}};
+        const matches = index.get(normalized.street) || [];
+        matches.push({feature,normalized});
+        index.set(normalized.street,matches);
+      }
+    }
+    for (let i=0;i<ranges.length;i+=6) await Promise.all(ranges.slice(i,i+6).map(loadRange));
+    return index;
+  })().catch(error=>{
+    countyIndexPromise = null;
+    throw error;
+  });
+  return countyIndexPromise;
+}
+
+async function streetPoints(input) {
+  const index = await loadCountyAddressIndex();
+  return index.get(input.street) || [];
+}
+
+function sheetLocation(input, points) {
+  const exact = points.filter(point=>compare(input,point.normalized));
+  const base = points.filter(point=>!point.normalized.unit);
+  const options = exact.length ? exact : base;
+  const places = new Map(options.map(point=>[point.feature.geometry.coordinates.join(','),point]));
+  if (places.size!==1) return null;
+  return {point:places.values().next().value,streetOnly:!exact.length};
+}
+
+function locateSheetRecord(record, index) {
+  const input = record.normalized;
+  const points = index.get(input.street) || [];
+  const location = sheetLocation(input,points);
+  if (location || points.length || !input.street.endsWith(' N US 550')) return location;
+  const alternate = input.street.replace(/ N US 550$/, ' US 550');
+  const fallback = sheetLocation({...input,street:alternate},index.get(alternate) || []);
+  return fallback && {...fallback,streetOnly:true};
+}
+
+function readableAddress(record) {
+  const {city,state,zip} = record.normalized;
+  return [record.address,city,[state,zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+}
+
+function openRecord(record) {
+  $('address').value = readableAddress(record);
+  queueCheck(true);
+}
+
+function markerPopup(group) {
+  const content = document.createElement('div');
   const heading = document.createElement('strong');
-  heading.textContent = title;
-  output.append(heading);
-  for (const line of lines) {
-    const p = document.createElement('p');
-    p.textContent = line;
-    output.append(p);
+  heading.textContent = 'Spreadsheet addresses';
+  content.append(heading);
+  const seen = new Set();
+  for (const {record,streetOnly} of group) {
+    const label = readableAddress(record);
+    if (seen.has(label)) continue;
+    seen.add(label);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'popup-address';
+    button.textContent = label + (streetOnly ? ' (street location)' : '');
+    button.addEventListener('click',()=>openRecord(record));
+    content.append(button);
   }
-  output.hidden = false;
+  return content;
+}
+
+async function populateSheetPoints() {
+  const generation = ++markerGeneration;
+  sheetMarkers.clearLayers();
+  $('point-label').textContent = records.length ? 'Locating spreadsheet addresses…' : 'No spreadsheet addresses to map';
+  if (!records.length) return;
+  const snapshot = records;
+  let index;
+  try {
+    index = await loadCountyAddressIndex();
+  } catch {
+    if (generation===markerGeneration) $('point-label').textContent = 'County address points unavailable';
+    return;
+  }
+  if (generation!==markerGeneration) return;
+  const located = snapshot.flatMap(record=>{
+    const location = locateSheetRecord(record,index);
+    return location ? [{record,...location}] : [];
+  });
+  const byLocation = new Map();
+  for (const match of located) {
+    const coords = match.point.feature.geometry.coordinates;
+    const group = byLocation.get(coords.join(',')) || [];
+    group.push(match);
+    byLocation.set(coords.join(','),group);
+  }
+  for (const group of byLocation.values()) {
+    const [lon,lat] = group[0].point.feature.geometry.coordinates;
+    L.circleMarker([lat,lon],{pane:'sheet-points',radius:5.5,color:'#fff',weight:1.5,fillColor:'#1578d5',fillOpacity:1,bubblingMouseEvents:false})
+      .addTo(sheetMarkers).bindPopup(()=>markerPopup(group),{maxHeight:200});
+  }
+  const placed = located.length;
+  const note = placed===snapshot.length ? '' : ' · '+placed+' of '+snapshot.length+' addresses located';
+  $('point-label').textContent = 'Spreadsheet addresses'+note;
+}
+
+function card(cardId, title, detail='', state='') {
+  $(cardId+'-card').dataset.state = state;
+  $(cardId+'-result').textContent = title;
+  if (cardId!=='oem') $(cardId+'-detail').textContent = detail;
 }
 function clearResult() {
-  $('result').hidden = true;
-  markers.clearLayers();
-  grid.setStyle(gridPaint);
+  ++searchGeneration;
+  clearTimeout(searchTimer);
+  focusMarkers.clearLayers();
+  showSuggestions([]);
+  card('sheet','Enter an address','Checks the primary address list first.');
+  card('map','Waiting for address','Checks the address point against the red coverage boundary.');
+  card('oem','If unresolved');
 }
-function markPoints(features) {
+function markPoints(points) {
+  focusMarkers.clearLayers();
   const bounds = L.latLngBounds([]);
-  for (const feature of features) {
+  for (const {feature} of points) {
     const [lon,lat] = feature.geometry.coordinates;
-    const position = [lat,lon];
     const label = document.createElement('span');
     label.textContent = feature.properties.PROPERTY_A;
-    L.circleMarker(position,{radius:9,color:'#2c2300',weight:2,fillColor:'#ffdf5d',fillOpacity:1})
-      .addTo(markers).bindPopup(label);
-    bounds.extend(position);
+    L.circleMarker([lat,lon],{pane:'selected-points',radius:10,color:'#372800',weight:2,fillColor:'#ffdf5d',fillOpacity:1})
+      .addTo(focusMarkers).bindPopup(label).bringToFront();
+    bounds.extend([lat,lon]);
   }
-  if (bounds.isValid()) map.fitBounds(bounds,{padding:[44,44],maxZoom:17});
+  if (bounds.isValid()) map.fitBounds(bounds,{padding:[48,48],maxZoom:17,animate:false});
 }
-async function mapCheck(input, sheetStatus) {
-  showResult('Step 2 · Checking the map',[sheetStatus]);
+
+function showSuggestions(matches) {
+  const list = $('address-suggestions');
+  list.replaceChildren();
+  list.hidden = !matches.length;
+  const seen = new Set();
+  for (const record of matches) {
+    const label = readableAddress(record);
+    if (seen.has(label)) continue;
+    seen.add(label);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.addEventListener('click',()=>openRecord(record));
+    list.append(button);
+    if (seen.size===6) break;
+  }
+}
+
+async function mapCheck(input, generation) {
+  card('map','Checking map','Looking up the county address point.','busy');
   try {
-    // The house number is validated before this lookup. Full strings are normalized locally.
-    const data = await getJSON(pointsUrl,{where:"UPPER(PROPERTY_A) LIKE '"+input.number+" %'",
-      outFields:'PROPERTY_A,OBJECTID',outSR:'4326',f:'geojson'});
-    if (!Array.isArray(data.features) || data.exceededTransferLimit || data.properties?.exceededTransferLimit) throw new Error('Incomplete address lookup');
-    const street = data.features.filter(feature=>feature.geometry?.type==='Point' && address(feature.properties.PROPERTY_A).street===input.street);
-    const matches = street.filter(feature=>address(feature.properties.PROPERTY_A).unit===input.unit);
+    const street = await streetPoints(input);
+    if (generation!==searchGeneration) return;
+    const matches = street.filter(point=>compare(input,point.normalized));
     markPoints(matches.length ? matches : street);
     if (matches.length!==1 || (!input.unit && street.length>1)) {
       const explanation = matches.length>1 || (!input.unit && street.length>1) ?
-        'Several county address points match. Include the unit if there is one.' :
-        street.length ? 'The street address was found, but the unit could not be confirmed.' : 'No matching county address point was found.';
-      showResult('Step 3 · Call OEM',[sheetStatus,explanation],'review');
+        'Several county address points match. Include a unit if there is one.' :
+        street.length ? 'Found the street address, but could not confirm the unit.' : 'No matching county address point.';
+      card('map','Needs review',explanation,'review');
+      card('oem','Call to confirm','','review');
       return;
     }
     await gridReady;
-    if (gridError) throw gridError;
-    const point = matches[0];
-    const tiles = gridFeatures.filter(tile=>coveredBy(tile.geometry,point.geometry.coordinates));
-    if (!tiles.length) {
-      showResult('Step 3 · Call OEM',[sheetStatus,point.properties.PROPERTY_A+' is outside the Housing Grid.'],'review');
-      return;
+    if (generation!==searchGeneration) return;
+    if (!coverage) throw new Error('Coverage unavailable');
+    const point = matches[0].feature;
+    if (coveredBy(coverage,point.geometry.coordinates)) {
+      card('map','Map pass',point.properties.PROPERTY_A+' is inside the coverage boundary.','pass');
+      card('oem','No call needed');
+    } else {
+      card('map','Outside coverage',point.properties.PROPERTY_A+' is outside the coverage boundary.','review');
+      card('oem','Call to confirm','','review');
     }
-    const selected = new Set(tiles.map(tile=>tile.properties.FID));
-    grid.eachLayer(layer=>{if (selected.has(layer.feature.properties.FID)) layer.setStyle(selectedPaint);});
-    showResult('Step 2 · Map pass',[sheetStatus,point.properties.PROPERTY_A+' is inside the Housing Grid.',
-      'Grid '+(tiles.length===1?'tile ':'tiles ')+tiles.map(tile=>tile.properties.TILELABEL).join(', ')],'pass');
   } catch {
-    showResult('Step 3 · Call OEM',[sheetStatus,'The county address or Housing Grid service could not complete the check.'],'review');
+    if (generation!==searchGeneration) return;
+    card('map','Map check unavailable','The address or Housing Grid service could not complete the check.','review');
+    card('oem','Call to confirm','','review');
   }
+}
+
+function prefixMatch(input, candidate) {
+  return candidate.street.startsWith(input.street) &&
+    (!input.unit || candidate.unit.startsWith(input.unit)) &&
+    ['city','state','zip'].every(field=>!input[field] || !candidate[field] || input[field]===candidate[field]);
+}
+
+async function runCheck(input, explicit, generation) {
+  card('sheet','Checking spreadsheet','','busy');
+  await sheetPromise;
+  if (generation!==searchGeneration) return;
+  const matches = records.filter(record=>compare(input,record.normalized));
+  const relatedUnits = records.some(record=>!input.unit && record.normalized.unit &&
+    compare(input,{...record.normalized,unit:''}));
+  if (matches.length===1 && !relatedUnits) {
+    const match = matches[0];
+    const details = [readableAddress(match),match.caseNumber && 'Case '+match.caseNumber,match.reason,match.source].filter(Boolean);
+    card('sheet','Spreadsheet match',details.join(' · '),'pass');
+    card('map','Locating address','Showing the spreadsheet address on the map.','busy');
+    card('oem','No call needed');
+    try {
+      const point = locateSheetRecord(match,await loadCountyAddressIndex());
+      if (generation!==searchGeneration) return;
+      if (point) markPoints([point.point]);
+      card('map',point ? 'Address shown' : 'No confirmed map point',
+        point?.streetOnly ? 'Marker shows the associated street location. Use the spreadsheet to confirm address details.' :
+        point ? 'Marker shows the county address point.' : 'Use the spreadsheet result.');
+    } catch {
+      if (generation===searchGeneration) card('map','Map point unavailable','Use the spreadsheet result.');
+    }
+    return;
+  }
+  const suggestions = records.filter(record=>prefixMatch(input,record.normalized));
+  showSuggestions(suggestions);
+  if (!explicit && suggestions.length) {
+    card('sheet','Choose an address','Select a suggestion or finish entering the full address.');
+    if (suggestions.length===1) {
+      try {
+        const record = suggestions[0];
+        const location = locateSheetRecord(record,await loadCountyAddressIndex());
+        if (generation===searchGeneration && location) {
+          markPoints([location.point]);
+          card('map','Address preview','Select the suggested address to verify it.');
+        }
+      } catch { /* Keep the suggestion available if its map point cannot be loaded. */ }
+    }
+    return;
+  }
+  if (!explicit && !input.street.includes(' ')) {
+    card('sheet','Enter the street name','Add a street name after the house number.');
+    return;
+  }
+  const status = sheetError ? 'Spreadsheet unavailable' : mapping.address<0 ? 'Address column needs setup' :
+    matches.length>1 || relatedUnits ? 'No single spreadsheet match' : 'No spreadsheet match';
+  card('sheet',status,'Continue with the map check.','review');
+  await mapCheck(input,generation);
+}
+
+function queueCheck(explicit) {
+  clearResult();
+  const input = address($('address').value);
+  if (!numberPattern.test(input.number) || (explicit && !input.street.includes(' '))) {
+    if (explicit) card('sheet','Enter a complete street address','Include the house number and street name.','review');
+    return;
+  }
+  const generation = searchGeneration;
+  if (explicit) void runCheck(input,true,generation);
+  else searchTimer = setTimeout(()=>void runCheck(input,false,generation),450);
 }
 
 consumeSetupLink();
@@ -485,13 +770,13 @@ $('setup').addEventListener('submit',event=>{
     };
     remember('lpc-housing-setup',config);
     showSetup();
-    clearResult();
     sheetPromise = loadSheet();
+    queueCheck(false);
   } catch (error) {
     renderSheetStatus(error.message);
   }
 });
-$('refresh').addEventListener('click',()=>{clearResult();sheetPromise=loadSheet();});
+$('refresh').addEventListener('click',()=>{sheetPromise=loadSheet();queueCheck(false);});
 $('upload').addEventListener('change',async event=>{
   const file = event.target.files[0];
   if (!file) return;
@@ -505,36 +790,13 @@ $('upload').addEventListener('change',async event=>{
       if (generation === sheetGeneration) resetSheet('The CSV could not be read.');
     } finally { event.target.value=''; }
   })();
+  queueCheck(false);
 });
 $('reset-map').addEventListener('click',()=>map.fitBounds(grid.getBounds().isValid()?grid.getBounds():initialView,{padding:[12,12]}));
-$('search').addEventListener('submit',async event=>{
+$('address').addEventListener('input',()=>queueCheck(false));
+$('search').addEventListener('submit',event=>{
   event.preventDefault();
-  if ($('check').disabled) return;
-  const input = address($('address').value);
-  clearResult();
-  if (!/^\d+[A-Z]?(?:-\d+[A-Z]?)?$/.test(input.number) || !input.street.includes(' ')) {
-    showResult('Enter a street address with a house number.',[],'review');
-    return;
-  }
-  $('check').disabled = true;
-  $('address').readOnly = true;
-  showResult('Step 1 · Checking the spreadsheet');
-  try {
-    await sheetPromise;
-    const matches = records.filter(record=>compare(input,record.normalized));
-    const relatedUnits = records.some(record=>!input.unit && record.normalized.unit &&
-      compare(input,{...record.normalized,unit:''}));
-    if (matches.length===1 && !relatedUnits) {
-      const match = matches[0];
-      const details = [match.address,match.normalized.city,match.normalized.state,match.normalized.zip].filter(Boolean).join(' · ');
-      showResult('Step 1 · Spreadsheet match',[details,
-        [match.caseNumber && 'Case '+match.caseNumber,match.reason,match.source].filter(Boolean).join(' · ')].filter(Boolean),'pass');
-      return;
-    }
-    const status = sheetError ? 'Spreadsheet check unavailable.' : mapping.address<0 ? 'Spreadsheet address column needs setup.' :
-      matches.length>1 || relatedUnits ? 'No single clear spreadsheet match.' : 'No spreadsheet match.';
-    await mapCheck(input,status);
-  } finally { $('check').disabled=false; $('address').readOnly=false; }
+  queueCheck(true);
 });
 </script>
 </body>
