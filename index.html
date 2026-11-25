@@ -156,7 +156,7 @@ li p+p{margin-top:5px}
   <ol>
     <li><div><strong>Check the spreadsheet.</strong><p>Enter the complete property address and unit, if applicable. A single normalized match completes the spreadsheet check. Use the case details and reason shown. If the spreadsheet has no clear match, continue to the map.</p></div></li>
     <li><div><strong>Check the location against the map.</strong><p>Use a single matching La Plata County address point. If the county lookup cannot locate the address, check an exact Esri address or unit match when offered. A point inside the red Housing Grid passes the map check. An address in a yellow flood damage review area needs OEM confirmation when it falls outside the Housing Grid.</p>
-    <p>Yellow areas are based on at least three distinct county address locations with documented minor damage, major damage, or destruction. The map uses 250 feet between neighboring locations to form clusters and merges 75-foot buffers around the clustered points. Review areas flag nearby homes for follow-up. Individual damage requires evidence for that home.</p></div></li>
+    <p>Yellow areas are based on at least three distinct county address locations with documented minor damage, major damage, or destruction. The map groups neighboring damage locations within a half mile (2,640 feet) and shades the merged quarter-mile buffers (1,320 feet) around those locations in yellow. Review areas flag nearby homes for follow-up. Individual damage requires evidence for that home.</p></div></li>
     <li><div><strong>Call OEM if the address is unresolved.</strong><p>Call <a href="tel:+19707599274">Rob Farino at 970-759-9274</a> first, then <a href="tel:+19707495273">Matthew Richardson at 970-749-5273</a>. Use this step when the address point is missing or ambiguous, the address is in a review area outside the grid, or the map check cannot confirm coverage.</p></div></li>
   </ol>
   <p id="sheet-status" role="status">Connecting to Google Sheets…</p>
@@ -630,8 +630,8 @@ function markerPopup(group) {
 
 const feetPerRadian = 20902231;
 const radians = Math.PI / 180;
-const neighborFeet = 250;
-const bufferFeet = 75;
+const neighborFeet = 2640;
+const bufferFeet = 1320;
 const minimumLocations = 3;
 const damageReasons = new Set(['MINOR DAMAGE','MAJOR DAMAGE','DESTROYED']);
 
@@ -665,7 +665,7 @@ function clusterLocations(locations) {
 }
 
 function bufferRing([lon,lat]) {
-  const segments = 32;
+  const segments = 64;
   const latitude = lat*radians;
   const distance = bufferFeet/feetPerRadian;
   const ring = Array.from({length:segments},(_,index)=>{
