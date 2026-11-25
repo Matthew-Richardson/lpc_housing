@@ -29,8 +29,7 @@ button:disabled{opacity:.55;cursor:wait}
 :focus-visible{outline:3px solid #b16900;outline-offset:2px}
 .verification{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:0 17px 15px}
 .verification-card{min-width:0;padding:11px 12px 12px;border:1px solid #c8d6de;border-top:4px solid #78929e;border-radius:8px;background:#f3f7f8}
-.verification-card h2{display:flex;align-items:center;gap:6px;font-size:.925rem;margin-bottom:4px;color:#284e60}
-.verification-card h2 span{display:inline-grid;place-items:center;width:22px;height:22px;background:#deeaee;border-radius:50%}
+.verification-card h2{font-size:.925rem;margin-bottom:4px;color:#284e60}
 .verification-card[data-active=true][data-state=""]{border-color:#1875a3;background:#edf7fc}
 .verification-card[data-active=false]{border-top-color:#c8d6de;background:#fafcfc}
 .verification-card strong{display:block;font-size:1.18rem;line-height:1.25;overflow-wrap:anywhere}
@@ -50,9 +49,7 @@ button:disabled{opacity:.55;cursor:wait}
 .popup-address{display:block;width:100%;margin-top:4px}
 .instructions{margin-top:14px}
 .instructions{padding:15px 17px}
-ol{padding:0;margin:12px 0 0;list-style:none;counter-reset:step;display:grid;gap:11px}
-li{counter-increment:step;display:grid;grid-template-columns:25px 1fr;gap:10px}
-li::before{content:counter(step);border-radius:50%;background:#e0edf1;color:#154659;font-size:.85rem;font-weight:700;height:25px;text-align:center;line-height:25px}
+.instructions ol{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:11px}
 li p{color:#405763}
 li p+p{margin-top:5px}
 .instructions a{color:#16546a}
@@ -109,17 +106,17 @@ li p+p{margin-top:5px}
   </form>
   <section class="verification" aria-label="Verification results" aria-live="polite" aria-atomic="true">
     <article class="verification-card" id="sheet-card" data-active="true" aria-current="step" data-state="">
-      <h2><span>1</span> Spreadsheet</h2>
+      <h2>Spreadsheet Approved</h2>
       <strong id="sheet-result">Enter an address</strong>
       <p id="sheet-detail">Checks the primary address list first.</p>
     </article>
     <article class="verification-card" id="map-card">
-      <h2><span>2</span> Map check</h2>
+      <h2>Map Approved</h2>
       <strong id="map-result">Waiting for address</strong>
       <p id="map-detail">Checks the address point against the Housing Grid and flood damage buffer zones.</p>
     </article>
     <article class="verification-card" id="oem-card">
-      <h2><span>3</span> Call OEM</h2>
+      <h2>Call OEM</h2>
       <strong id="oem-result">If unresolved</strong>
       <div class="contacts">
         <a id="primary-contact"><small>Primary</small><span>Rob Farino</span><span></span></a>
@@ -147,10 +144,10 @@ li p+p{margin-top:5px}
 <section class="instructions" aria-labelledby="steps">
   <h2 id="steps">Verification requirements</h2>
   <ol>
-    <li><div><strong>Check the spreadsheet.</strong><p>Enter the complete property address and unit, if applicable. A single normalized match completes the spreadsheet check. Use the case details and reason shown. If the spreadsheet has no clear match, continue to the map.</p></div></li>
-    <li><div><strong>Check the location against the map.</strong><p>Use a single matching La Plata County address point. If the county lookup cannot locate the address, check an exact Esri address or unit match when offered. A point inside either the red Housing Grid or a yellow quarter-mile buffer zone passes Step 2.</p>
+    <li><div><strong>Spreadsheet Approved</strong><p>Enter the complete property address and unit, if applicable. A single normalized match completes the spreadsheet check. Use the case details and reason shown. If the spreadsheet has no clear match, continue to the map.</p></div></li>
+    <li><div><strong>Map Approved</strong><p>Use a single matching La Plata County address point. If the county lookup cannot locate the address, check an exact Esri address or unit match when offered. A point inside either the red Housing Grid or a yellow quarter-mile buffer zone passes the map check.</p>
     <p>Every mapped spreadsheet location gets a yellow quarter-mile buffer (1,320 feet), including isolated points and rows shown at an approximate street location. The map groups neighboring points within a half mile (2,640 feet) and merges overlapping buffers. Rows without a map location cannot be buffered. A map pass confirms the address is in a qualifying area. Individual damage requires evidence for that home.</p></div></li>
-    <li><div><strong>Call OEM if the address is unresolved.</strong><p>Call <a href="tel:+19707599274">Rob Farino at 970-759-9274</a> first, then <a href="tel:+19707495273">Matthew Richardson at 970-749-5273</a>. Use this step if the address point is missing or ambiguous, falls outside both zones, or coverage cannot be confirmed.</p></div></li>
+    <li><div><strong>Call OEM</strong><p>Call <a href="tel:+19707599274">Rob Farino at 970-759-9274</a> first, then <a href="tel:+19707495273">Matthew Richardson at 970-749-5273</a>. Use this step if the address point is missing or ambiguous, falls outside both zones, or coverage cannot be confirmed.</p></div></li>
   </ol>
   <p id="sheet-status" role="status">Connecting to Google Sheets…</p>
   <div id="mapping" hidden></div>
