@@ -67,7 +67,18 @@ li p+p{margin-top:5px}
 .contacts span:last-child{font-weight:700}
 #mapping{display:flex;flex-wrap:wrap;gap:9px;margin:9px 0}
 #mapping label{display:grid;font-size:.875rem;gap:3px}
-.cluster-key{background:#fce38d;border:1px solid #956000;border-radius:2px}
+.cluster-key{background:#ffdd48;border:1px solid #644900;border-radius:2px}
+.map-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px 18px;padding:9px 17px;border-top:1px solid #d8e3e9;background:#f3f7f8;border-radius:0 0 12px 12px}
+#map-references{display:flex;flex-wrap:wrap;gap:5px 14px}
+#map-references[hidden]{display:none}
+#map-references label{display:inline-flex;gap:5px;align-items:center;font-size:.875rem}
+#map-references input{width:16px;height:16px;accent-color:#124c60}
+.map-controls select{font-size:.875rem;max-width:100%;padding:4px 7px}
+#address-scale,#reference-status{color:#405763;font-size:.875rem}
+#reference-status:empty{display:none}
+.review-area-marker{display:grid;place-items:center;background:#ffdc46;border:2px solid #493302;border-radius:50%;color:#372500;font:bold 14px Arial,sans-serif;box-shadow:0 0 0 2px white,0 2px 5px #0009;cursor:pointer}
+.review-area-marker:hover,.review-area-marker:focus-visible{background:#fff1a1}
+.damage-cluster{filter:drop-shadow(0 0 1px #4c3009)}
 @media(max-width:780px){.verification-card .contacts{gap:5px}}
 @media(max-width:620px){main{padding:18px 10px 24px}.verification{grid-template-columns:1fr;gap:6px}.verification-card{border-top-width:1px;border-left:4px solid #78929e;padding:6px 10px}.verification-card[data-active=true][data-state=pass]{border-left-color:#23844f}.verification-card[data-active=true][data-state=review]{border-left-color:#b76512}.verification-card[data-active=true][data-state=busy]{border-left-color:#1875a3}}
 @media(max-width:380px){.search-row{flex-wrap:wrap}#address{flex-basis:100%}}
@@ -75,6 +86,7 @@ li p+p{margin-top:5px}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
 
 <script src="https://unpkg.com/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js" integrity="sha256-f4YZ6EqGzo3UAMm1BDDpyM+PJgJ7Ge60efEJ9cGp1og=" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/esri-leaflet@3.0.15/dist/esri-leaflet.js" integrity="sha256-Z39y1lfUluGP5O5//K/vykMoxP/I1UIYkF/YSxA0Tgk=" crossorigin="anonymous"></script>
 </head>
 <body>
 <main>
@@ -126,6 +138,17 @@ li p+p{margin-top:5px}
     <span><i class="coverage-key"></i><span id="grid-label">Housing Grid coverage</span></span>
     <span><i class="cluster-key"></i><span id="cluster-label">Loading flood damage review areas…</span></span>
     <span><i class="points-key"></i><span id="point-label">Loading spreadsheet addresses…</span></span>
+  </div>
+  <div class="map-controls">
+    <div id="map-references" role="group" aria-label="Map reference layers">
+      <label><input type="checkbox" id="roads-toggle" checked> Roads</label>
+      <label><input type="checkbox" id="addresses-toggle" checked> <span>Address labels<span id="address-scale"></span></span></label>
+    </div>
+    <label for="cluster-jump" id="cluster-navigation" hidden>Zoom to review area</label>
+    <select id="cluster-jump" aria-label="Zoom to review area" hidden>
+      <option value="">Choose an area</option>
+    </select>
+    <span id="reference-status" role="status"></span>
   </div>
 </section>
 <section class="instructions" aria-labelledby="steps">
@@ -263,6 +286,51 @@ const initialView = L.latLngBounds([37.18,-108.02],[37.53,-107.73]);
 const map = L.map('map', {scrollWheelZoom:false,maxZoom:22}).fitBounds(initialView);
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   {maxNativeZoom:19,maxZoom:22,attribution:'Imagery © Esri and contributors'}).addTo(map);
+const countyMapService = 'https://gis.lpcgov.org/arcgis/rest/services/Operational_Layers/Search_and_Select_Query/MapServer';
+const addressLabelZoom = 16;
+function addCountyReferences() {
+  if (!L.esri) {
+    $('reference-status').textContent = 'County roads and address labels are unavailable.';
+    $('map-references').hidden = true;
+    return;
+  }
+  const roadsPane = map.createPane('county-roads');
+  roadsPane.style.zIndex = 407;
+  const addressPane = map.createPane('county-addresses');
+  addressPane.style.zIndex = 408;
+  const references = [
+    {input:$('roads-toggle'),name:'road labels',layer:L.esri.dynamicMapLayer({
+      url:countyMapService,layers:[4],pane:'county-roads',minZoom:11,attribution:'Roads and addresses © La Plata County GIS'
+    })},
+    {input:$('addresses-toggle'),name:'address labels',layer:L.esri.dynamicMapLayer({
+      url:countyMapService,layers:[0],pane:'county-addresses',minZoom:addressLabelZoom
+    })}
+  ];
+  const failed = new Set();
+  function showReferenceStatus() {
+    $('reference-status').textContent = failed.size ? 'Could not load county '+[...failed].join(' and ')+'.' : '';
+  }
+  for (const {input,name,layer} of references) {
+    layer.on('error requesterror',()=>{failed.add(name);showReferenceStatus();});
+    layer.on('load',()=>{failed.delete(name);showReferenceStatus();});
+    input.addEventListener('change',()=>{
+      if (input.checked) layer.addTo(map);
+      else {
+        layer.remove();
+        failed.delete(name);
+        showReferenceStatus();
+      }
+    });
+    if (input.checked) layer.addTo(map);
+  }
+  function showAddressScale() {
+    $('address-scale').textContent = map.getZoom()<addressLabelZoom ? ' (zoom in)' : '';
+  }
+  map.on('zoomend',showAddressScale);
+  showAddressScale();
+}
+addCountyReferences();
+
 const clusterPane = map.createPane('cluster-areas');
 clusterPane.style.zIndex = 405;
 clusterPane.style.pointerEvents = 'none';
@@ -276,9 +344,35 @@ const grid = L.geoJSON(null,{
 }).addTo(map);
 const clusterLayer = L.geoJSON(null,{
   pane:'cluster-areas',interactive:false,
-  style:{color:'#e4aa19',weight:2,fillColor:'#ffce42',fillOpacity:.34,className:'damage-cluster'}
+  style:{color:'#ffdf4a',weight:3,fillColor:'#ffce42',fillOpacity:.49,className:'damage-cluster'}
 }).addTo(map);
 let clusterAreas = [];
+let clusterBounds = [];
+const reviewMarkerPane = map.createPane('cluster-markers');
+reviewMarkerPane.style.zIndex = 415;
+const reviewMarkers = L.layerGroup().addTo(map);
+function zoomToReviewArea(index) {
+  if (clusterBounds[index]?.isValid()) map.fitBounds(clusterBounds[index],{padding:[38,38],maxZoom:18});
+}
+$('cluster-jump').addEventListener('change',event=>{
+  if (event.target.value!=='') zoomToReviewArea(Number(event.target.value));
+});
+function toggleReviewMarkers() {
+  if (map.getZoom()<16) reviewMarkers.addTo(map);
+  else reviewMarkers.remove();
+}
+map.on('zoomend',toggleReviewMarkers);
+toggleReviewMarkers();
+function clearReviewAreas() {
+  clusterLayer.clearLayers();
+  reviewMarkers.clearLayers();
+  clusterAreas = [];
+  clusterBounds = [];
+  $('cluster-navigation').hidden = true;
+  $('cluster-jump').hidden = true;
+  $('cluster-jump').length = 1;
+  $('cluster-jump').selectedIndex = 0;
+}
 let clusterReady = Promise.resolve();
 const sheetMarkers = L.layerGroup().addTo(map);
 const focusMarkers = L.layerGroup().addTo(map);
@@ -593,12 +687,27 @@ function drawClusters(located) {
     const coordinates = point.feature.geometry.coordinates;
     distinct.set(coordinates.join(','),coordinates);
   }
-  const groups = clusterLocations([...distinct.values()]);
+  const groups = clusterLocations([...distinct.values()]).sort((a,b)=>
+    Math.max(...b.map(point=>point[1]))-Math.max(...a.map(point=>point[1])));
   clusterAreas = groups.map(points=>({
     type:'MultiPolygon',
     coordinates:polygonClipping.union(...points.map(point=>[bufferRing(point)]))
   }));
-  for (const geometry of clusterAreas) clusterLayer.addData({type:'Feature',geometry,properties:{}});
+  clusterAreas.forEach((geometry,index)=>{
+    clusterLayer.addData({type:'Feature',geometry,properties:{}});
+    const points = groups[index];
+    const bounds = L.latLngBounds(geometry.coordinates.flat(2).map(([lon,lat])=>[lat,lon]));
+    clusterBounds.push(bounds);
+    const number = index+1;
+    const title = 'Review area '+number+' · '+points.length+' damage locations';
+    $('cluster-jump').add(new Option(title,String(index)));
+    L.marker(bounds.getCenter(),{
+      pane:'cluster-markers',title,alt:title,
+      icon:L.divIcon({className:'review-area-marker',html:String(number),iconSize:[27,27],iconAnchor:[13.5,13.5]})
+    }).on('click',()=>zoomToReviewArea(index)).addTo(reviewMarkers);
+  });
+  $('cluster-navigation').hidden = !clusterAreas.length;
+  $('cluster-jump').hidden = !clusterAreas.length;
   $('cluster-label').textContent = clusterAreas.length ? 'Flood damage review areas · '+clusterAreas.length+' clusters' :
     'No flood damage review areas';
 }
@@ -606,8 +715,7 @@ function drawClusters(located) {
 async function populateSheetPoints() {
   const generation = ++markerGeneration;
   sheetMarkers.clearLayers();
-  clusterLayer.clearLayers();
-  clusterAreas = [];
+  clearReviewAreas();
   $('cluster-label').textContent = records.length ? 'Locating flood damage review areas…' : 'No flood damage review areas';
   $('point-label').textContent = records.length ? 'Locating spreadsheet addresses…' : 'No spreadsheet addresses to map';
   if (!records.length) return;
@@ -642,8 +750,7 @@ async function populateSheetPoints() {
   try {
     drawClusters(located);
   } catch {
-    clusterAreas = [];
-    clusterLayer.clearLayers();
+    clearReviewAreas();
     $('cluster-label').textContent = 'Flood damage review areas unavailable';
   }
   const placed = located.length;
@@ -866,7 +973,10 @@ function queueCheck(explicit) {
 showContacts();
 sheetPromise = loadSheet();
 $('try-esri').addEventListener('click',tryEsriAddress);
-$('reset-map').addEventListener('click',()=>map.fitBounds(grid.getBounds().isValid()?grid.getBounds():initialView,{padding:[12,12]}));
+$('reset-map').addEventListener('click',()=>{
+  $('cluster-jump').selectedIndex = 0;
+  map.fitBounds(grid.getBounds().isValid()?grid.getBounds():initialView,{padding:[12,12]});
+});
 $('address').addEventListener('input',()=>queueCheck(false));
 $('search').addEventListener('submit',event=>{
   event.preventDefault();
