@@ -82,6 +82,9 @@ button:disabled{opacity:.55;cursor:wait}
 @media(max-width:780px){.verification-card .contacts{gap:5px}}
 @media(max-width:620px){main{padding:18px 10px 24px}.verification{grid-template-columns:1fr;gap:6px}.verification-card{border-top-width:1px;border-left:4px solid #78929e;padding:6px 10px}.verification-card[data-active=true][data-state=pass]{border-left-color:#23844f}.verification-card[data-active=true][data-state=review]{border-left-color:#b76512}.verification-card[data-active=true][data-state=busy]{border-left-color:#1875a3}}
 @media(max-width:380px){.search-row{flex-wrap:wrap}#address{flex-basis:100%}}
+.site-footer{margin-top:12px;font-size:.875rem}
+.site-footer nav{display:flex;flex-wrap:wrap;gap:8px 18px}
+.site-footer a,.sheet-access a{color:#16546a}
 </style>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
 
@@ -102,6 +105,7 @@ button:disabled{opacity:.55;cursor:wait}
     <div>
       <strong>Private spreadsheet</strong>
       <p id="google-status" role="status">Checking Google sign-in availability…</p>
+      <p>Read how the map uses Google Sheets data in the <a href="privacy.html">Privacy Policy</a>.</p>
     </div>
     <button type="button" id="google-connect" disabled>Sign in with Google</button>
     <button type="button" id="google-disconnect" hidden>Disconnect spreadsheet</button>
@@ -169,6 +173,9 @@ button:disabled{opacity:.55;cursor:wait}
   <p id="sheet-status" role="status" hidden></p>
   <div id="mapping" hidden></div>
 </section>
+<footer class="site-footer">
+  <nav aria-label="Site policies"><a href="privacy.html">Privacy Policy</a><a href="terms.html">Terms of Service</a></nav>
+</footer>
 </main>
 <script>
 const words = {
