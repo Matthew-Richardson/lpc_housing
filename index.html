@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NOV Flood 2026 · Housing Verification</title>
+<meta name="google-oauth-client-id" content="">
+<script src="https://accounts.google.com/gsi/client" async></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
 <style>
 :root{font-family:Arial,sans-serif;color:#142838;background:#edf2f4;line-height:1.5;color-scheme:light}
@@ -15,6 +17,9 @@ header{display:flex;align-items:center;flex-wrap:wrap;gap:12px 22px;margin-botto
 .agency{margin:0 0 3px;color:#466572;font-size:.875rem;font-weight:700}
 h1,h2,p{margin:0} h1{font-size:clamp(1.9rem,5vw,2.6rem);line-height:1.15;letter-spacing:-.025em} h2{font-size:1.18rem}
 .work,.instructions{border:1px solid #c8d6de;background:white;border-radius:12px}
+.sheet-access{display:flex;gap:8px 16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 17px;border-bottom:1px solid #d8e3e9;background:#f3f7f8;border-radius:12px 12px 0 0}
+.sheet-access p{font-size:.875rem;color:#405763}
+.sheet-access button:disabled{cursor:default}
 form{padding:15px 17px} label{font-weight:700}
 .search-row{display:flex;gap:9px;margin-top:6px}
 button,input,select{font:inherit;border-radius:7px;border:1px solid #879da9}
@@ -93,6 +98,14 @@ button:disabled{opacity:.55;cursor:wait}
   </div>
 </header>
 <section class="work" aria-label="Address check">
+  <section class="sheet-access" aria-label="Private spreadsheet access">
+    <div>
+      <strong>Private spreadsheet</strong>
+      <p id="google-status" role="status">Checking Google sign-in availability…</p>
+    </div>
+    <button type="button" id="google-connect" disabled>Sign in with Google</button>
+    <button type="button" id="google-disconnect" hidden>Disconnect spreadsheet</button>
+  </section>
   <form id="search">
     <label for="address">Property address</label>
     <div class="search-row">
@@ -233,28 +246,6 @@ function compare(input, record) {
     && input.unit === record.unit;
 }
 
-function parseCSV(source) {
-  const rows = [];
-  let row = [], value = '', quoted = false;
-  const csv = source.replace(/^\uFEFF/,'');
-  for (let i = 0; i < csv.length; i++) {
-    const c = csv[i];
-    if (c === '"') {
-      if (quoted && csv[i+1] === '"') { value += '"'; i++; }
-      else if (quoted || !value) quoted = !quoted;
-      else value += c;
-    } else if (!quoted && c === ',') {
-      row.push(value.trim()); value = '';
-    } else if (!quoted && (c === '\r' || c === '\n')) {
-      row.push(value.trim()); rows.push(row); row = []; value = '';
-      if (c === '\r' && csv[i+1] === '\n') i++;
-    } else value += c;
-  }
-  if (quoted) throw new Error('The CSV contains an unfinished quoted field.');
-  if (row.length || value) rows.push([...row,value.trim()]);
-  return rows.filter(line=>line.some(Boolean));
-}
-
 function contains(ring, [x,y]) {
   let inside = false;
   for (let i = 0, j = ring.length-1; i < ring.length; j = i++) {
@@ -390,7 +381,7 @@ const mappingFields = {
   reason:['REASON','DAMAGE','DAMAGE CATEGORY'], source:['SOURCE']
 };
 const labels = {address:'Address column',city:'City',state:'State',zip:'ZIP',caseNumber:'Case number',reason:'Reason',source:'Source'};
-let headings = [], rows = [], records = [], mapping = {}, sheetPromise, sheetGeneration = 0, sheetError = '';
+let headings = [], rows = [], records = [], mapping = {}, sheetPromise = Promise.resolve(), sheetGeneration = 0, sheetError = '';
 const defaultSetup = {
   sheet: 'https://docs.google.com/spreadsheets/d/1qF6ekS8P2r4T0NF_10JgRcF5P7s24qK2PXwMu9lv7Q4/edit?gid=0',
   primary: '9707599274',
@@ -425,12 +416,12 @@ function renderSheetStatus(extra='') {
   const message = extra || (mapping.address<0 ? 'Select the address column to run the spreadsheet check.' :
     mapping.reason<0 ? 'Select the damage reason column to show it in spreadsheet results.' : '');
   status.textContent = message;
-  status.hidden = !message || message==='Connecting to Google Sheets…';
+  status.hidden = Boolean(extra) || !message;
 }
-function loadRows(text) {
-  const parsed = parseCSV(text);
-  if (!parsed.length || parsed[0].length < 2 || /^\s*</.test(text)) throw new Error('The spreadsheet CSV could not be read.');
-  [headings,...rows] = parsed;
+function loadRows(values) {
+  if (!Array.isArray(values) || !values[0]?.some(Boolean)) throw new Error('The spreadsheet has no column headers.');
+  [headings,...rows] = values.map(row=>row.map(value=>String(value ?? '').trim()));
+  if (!rows.some(row=>row.some(Boolean))) rows = [];
   sheetError = '';
   mapping = Object.fromEntries(Object.entries(mappingFields).map(([field, aliases])=>{
     const saved = storedMapping[field];
@@ -472,27 +463,120 @@ function renderMapping() {
 }
 function resetSheet(message) {
   sheetError = message;
+  headings = [];
+  rows = [];
   records = [];
-  clusterReady = populateSheetPoints();
   mapping = {address:-1};
+  clusterReady = populateSheetPoints();
   $('mapping').replaceChildren();
   $('mapping').hidden = true;
   renderSheetStatus(message);
 }
-async function loadSheet() {
-  const generation = ++sheetGeneration;
-  resetSheet('Connecting to Google Sheets…');
+const sheetsScope = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+const googleClientId = document.querySelector('meta[name="google-oauth-client-id"]').content.trim();
+let sessionTimer;
+let sheetRequest;
+
+function googleStatus(message, {busy=false, connected=false, canDisconnect=connected}={}) {
+  $('google-status').textContent = message;
+  $('google-connect').hidden = connected;
+  $('google-connect').disabled = busy || !googleClientId;
+  $('google-disconnect').hidden = !canDisconnect;
+}
+
+function disconnectGoogle(message='Sign in with a Google account that has access to the spreadsheet.') {
+  clearTimeout(sessionTimer);
+  sheetRequest?.abort();
+  ++sheetGeneration;
+  $('address').value = '';
+  map.closePopup();
+  clearResult();
+  resetSheet('Google Sheet is disconnected.');
+  googleStatus(message);
+}
+
+function connectGoogle() {
+  const oauth = window.google?.accounts?.oauth2;
+  if (!oauth) {
+    googleStatus('Google sign-in could not load. Reload the page to try again.');
+    return;
+  }
+  function authorizationFailed(message) {
+    googleStatus(message);
+  }
+  googleStatus('Waiting for Google sign-in…',{busy:true});
   try {
-    const {id,gid} = sheetReference(defaultSetup.sheet);
-    const response = await fetch('https://docs.google.com/spreadsheets/d/'+id+'/export?format=csv&gid='+gid,
-      {cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(12000)});
-    if (!response.ok) throw new Error();
-    const text = await response.text();
-    if (generation === sheetGeneration) loadRows(text);
+    const client = oauth.initTokenClient({
+      client_id:googleClientId,
+      scope:sheetsScope,
+      include_granted_scopes:false,
+      callback:response=>{
+        if (response.error || !response.access_token || !oauth.hasGrantedAllScopes(response,sheetsScope)) {
+          authorizationFailed('Google did not grant read-only Sheets access. Try again with an account that can open the spreadsheet.');
+          return;
+        }
+        const expiryMs = Number(response.expires_in)*1000;
+        clearTimeout(sessionTimer);
+        if (expiryMs>0) {
+          sessionTimer = setTimeout(()=>disconnectGoogle('Google access expired. Sign in again to reload the spreadsheet.'),expiryMs);
+        }
+        sheetPromise = loadSheet(response.access_token);
+      },
+      error_callback:error=>authorizationFailed(error.type==='popup_failed_to_open' ?
+        'Allow pop-ups for this page, then try Google sign-in again.' : 'Google sign-in did not complete. Try again.')
+    });
+    client.requestAccessToken({prompt:'select_account'});
   } catch {
-    if (generation === sheetGeneration) resetSheet('Google Sheet unavailable. Reload it or use a CSV export.');
+    authorizationFailed('Google sign-in could not start. Try again.');
   }
 }
+
+async function loadSheet(token) {
+  const generation = ++sheetGeneration;
+  const request = new AbortController();
+  sheetRequest = request;
+  resetSheet('Loading private spreadsheet…');
+  googleStatus('Loading the private spreadsheet…',{busy:true,canDisconnect:true});
+  try {
+    const {id,gid} = sheetReference(defaultSetup.sheet);
+    const base = 'https://sheets.googleapis.com/v4/spreadsheets/'+encodeURIComponent(id);
+    const options = {cache:'no-store',credentials:'omit',redirect:'error',
+      headers:{Authorization:'Bearer '+token},
+      signal:AbortSignal.any([request.signal,AbortSignal.timeout(20000)])};
+    async function read(url) {
+      const response = await fetch(url,options);
+      if (!response.ok) {
+        const data = await response.json().catch(()=>({}));
+        const reason = data.error?.details?.find(item=>item.reason)?.reason;
+        if (reason==='SERVICE_DISABLED') throw new Error('Enable the Google Sheets API in the OAuth client’s Google Cloud project.');
+        if (response.status===403 || response.status===404) {
+          throw new Error('This Google account could not open the spreadsheet. Check its sharing permissions or try another account.');
+        }
+        if (response.status===401) throw new Error('Google access expired. Sign in again.');
+        throw new Error('Google Sheets could not load the spreadsheet. Try again.');
+      }
+      return response.json();
+    }
+    const metadata = await read(base+'?'+new URLSearchParams({fields:'sheets(properties(sheetId,title))'}));
+    const tab = metadata.sheets?.find(sheet=>String(sheet.properties.sheetId)===gid)?.properties.title;
+    if (!tab) throw new Error('The configured spreadsheet tab could not be found.');
+    const range = encodeURIComponent("'"+tab.replaceAll("'","''")+"'");
+    const data = await read(base+'/values/'+range+'?valueRenderOption=FORMATTED_VALUE');
+    if (generation!==sheetGeneration) return;
+    loadRows(data.values);
+    googleStatus('Private spreadsheet connected.',{connected:true});
+  } catch (error) {
+    if (generation!==sheetGeneration) return;
+    clearTimeout(sessionTimer);
+    const message = error.name==='TypeError' || error.name==='TimeoutError' ?
+      'Google Sheets could not be reached. Try again.' : error.message;
+    resetSheet(message);
+    googleStatus(message);
+  } finally {
+    if (sheetRequest===request) sheetRequest = null;
+  }
+}
+
 async function getJSON(endpoint, query) {
   const response = await fetch(endpoint+'?'+new URLSearchParams(query),
     {cache:'no-store',signal:AbortSignal.timeout(15000)});
@@ -669,6 +753,10 @@ async function populateSheetPoints() {
   clearReviewAreas();
   $('cluster-label').textContent = records.length ? 'Locating flood damage buffer zones…' : 'No flood damage buffer zones';
   $('point-label').textContent = records.length ? 'Locating spreadsheet addresses…' : 'No spreadsheet addresses to map';
+  if (sheetError) {
+    $('cluster-label').textContent = 'Yellow zones require spreadsheet access';
+    $('point-label').textContent = 'Spreadsheet addresses unavailable';
+  }
   if (!records.length) return !sheetError && mapping.address>=0;
   const snapshot = records;
   let index;
@@ -908,7 +996,8 @@ async function runCheck(input, explicit, generation) {
   }
   const status = sheetError ? 'Spreadsheet unavailable' : mapping.address<0 ? 'Address column needs setup' :
     matches.length>1 || relatedUnits ? 'No single spreadsheet match' : 'No spreadsheet match';
-  card('sheet',status,'Continue with the map check.','review');
+  const detail = sheetError ? 'Connect the private spreadsheet above. The map can still check the Housing Grid.' : 'Continue with the map check.';
+  card('sheet',status,detail,'review');
   await mapCheck(input,generation);
 }
 
@@ -925,7 +1014,11 @@ function queueCheck(explicit) {
 }
 
 showContacts();
-sheetPromise = loadSheet();
+resetSheet('Google Sheet is disconnected.');
+googleStatus(googleClientId ? 'Sign in with a Google account that can open the spreadsheet.' :
+  'Google sign-in needs setup. The Housing Grid is available.');
+$('google-connect').addEventListener('click',connectGoogle);
+$('google-disconnect').addEventListener('click',()=>disconnectGoogle());
 $('try-esri').addEventListener('click',tryEsriAddress);
 function fitOverview() {
   const bounds = L.latLngBounds([]);
